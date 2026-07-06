@@ -23,11 +23,11 @@ RUN pip install RNApolis &&\
     pip install mmcif-pdbx && \
     git clone https://github.com/rcsb/RNAView.git && \
     cd RNAView && make && cd .. && \
-    mkdir MC-Annotate && cd MC-Annotate && wget https://major.iric.ca/mc-tools/releases/MC-Annotate.zip && \
     git clone https://github.com/kad-ecoli/BeEM.git && \
     cd BeEM && \
     g++ -O3 BeEM.cpp -o BeEM && cd .. && \
-    && unzip MC-Annotate.zip && chmod +x MC-Annotate && cd .. \
+    mkdir MC-Annotate && cd MC-Annotate && wget https://major.iric.ca/mc-tools/releases/MC-Annotate.zip && \
+    unzip MC-Annotate.zip && chmod +x MC-Annotate && cd .. \
 
 
 
