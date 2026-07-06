@@ -1,0 +1,9 @@
+package it.unicam.cs.bdslab.extrarnas;
+import java.util.Locale;
+
+public class App {
+    public static void main(String[] args) {
+        Locale.setDefault(Locale.US);
+        Main.main(args);
+    }
+}
