@@ -36,8 +36,8 @@ When running the application, you will be guided through a configuration process
 
    The extended format includes the following columns:
 
-   | Index | Nucleotide | cWW | tWW | cWH | tWH | cWS | tWS | cHH | tHH | cHS | tHS | cSS | tSS |
-         |-------|------------|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|
+   | id | nt | cWW | tWW | cWH | tWH | cWS | tWS | cHH | tHH | cHS | tHS | cSS | tSS |
+   |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|
 
 ### Canonical vs Non-Canonical Base Pairs
 In EXTRARNAS, **Canonical base pairs** correspond strictly to standard cis Watson-Crick pairs (A-U, G-C, G-U).
@@ -69,6 +69,8 @@ Run the following command on your specific jar:
 java -jar EXTRARNAS-specificBundle-fat.jar
 ```
 
+## Troubleshooting
+
 ### JAVFX Startup problem
 If you have problem at the startup it's due to a javafx startup error. You have to download **JAVAFX 21** and run the following command
 
@@ -84,6 +86,10 @@ java -Dcom.sun.xml.bind.v2.bytecode.ClassTailor.noOptimize=true ...
 ```
 
 *(You don't need to specify extra complex classpath flags since it's a "fat" jar containing all its dependencies).*
+
+### Current limitations
+
+mmCIF→PDB conversion for bundled PDB entries may fail in a small number of cases because of placeholder crystallographic records produced by [BeEM](https://github.com/kad-ecoli/BeEM/).
 
 ## License
 
