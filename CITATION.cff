@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+title: EXTRARNAS
+message: "If you use this software, please cite the associated publication."
+type: software
+
+authors:
+  - family-names: "Di Petta"
+    given-names: "Federico"
+    orcid: "https://orcid.org/0009-0006-7469-5417"
+
+  - family-names: "Rosati"
+    given-names: "Piermichele"
+    orcid: "https://orcid.org/0009-0006-2338-8636"
+
+  - family-names: "Hierro Canchari"
+    given-names: "Piero"
+
+  - family-names: "Quadrini"
+    given-names: "Michela"
+    orcid: "https://orcid.org/0000-0003-0539-0290"
+
+  - family-names: "Tesei"
+    given-names: "Luca"
+    orcid: "https://orcid.org/0000-0002-7536-8796"
+
+repository-code: "https://github.com/bdslab/EXTRARNAS"
+
+license: Apache-2.0
+
+version: "v1.0.1-cibb2026"
+
+date-released: 2026-07-07
