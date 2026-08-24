@@ -14,12 +14,13 @@ When running the application, you will be guided through a configuration process
 
 1. **Shared Volume / Workspace Setup:** The software will ask you to specify a local directory to be shared with the Docker container. This is necessary to pass input data to the extraction tools and to securely retrieve their outputs.
 
-2. **Add CSV molecules list:** Use this button to select a CSV file from your system and load the molecules to be processed. The file must contain two columns: `id` and `chain`, where `id` is the PDB code (4 letters or digits) and `chain` is the chain identifier in the PDB file (one or more letters, or `*` to process all chains in the structure). Example:
+2. **Add CSV molecules list:** Use this button to select a CSV file from your system and load the molecules to be processed. The file must contain two columns: `id` and `chain`, where `id` is the PDB code (4 letters or digits) and `chain` is the author/PDB chain identifier (`_atom_site.auth_asym_id`). Do not use the mmCIF `_atom_site.label_asym_id`. Chain IDs are case-sensitive; use semicolons to request multiple chains or `*` to process all RNA chains in the structure. Example:
 
 | id   | chain |
 |------|-------|
 | 4PLX | A     |
 | 6QNR | A     |
+| 4V5K | BB;DB |
 | 2KOC | *     |
 
 *Note: `*` means that all chains in the structure will be processed.*

@@ -40,7 +40,7 @@ public class IOController {
     }
 
     /**
-     * Loads molecules from a CSV file where col0 is molecule ID and col1 is chain filter.
+     * Loads molecules from a CSV file where col0 is the molecule ID and col1 is an auth chain filter.
      */
     public List<StructureInfo> loadMoleculesFromCsv(Path csvPath) throws IOException {
         if (csvPath == null || !Files.isRegularFile(csvPath)) {

@@ -96,7 +96,7 @@ public class RNAviewCustomListener extends RNAviewGrammarBaseListener {
         this.pairBuilder.setPos2(positions[1] - 1);
         this.pairBuilder.setNucleotide1(ctx.BASE_PAIR().getText().split("-")[0]);
         this.pairBuilder.setNucleotide2(ctx.BASE_PAIR().getText().split("-")[1]);
-        // Tipo di default: se enterAnnotation non scatta (annotazione malformata) il tipo resta valido, non null
+        // Keep a valid, non-null default type if enterAnnotation is not called for a malformed annotation.
         this.pairBuilder.setType(BondType.fromString(null));
     }
 
@@ -134,7 +134,7 @@ public class RNAviewCustomListener extends RNAviewGrammarBaseListener {
         } else if (ctx.EDGE_PAIR() != null && ctx.ORIENTATION() != null) {
             this.pairBuilder.setType(getType(ctx.EDGE_PAIR().getText(), ctx.ORIENTATION().getText()));
         } else {
-            // Annotazione non standard (es. notazione estesa non riconosciuta): tipo sconosciuto invece di crash
+            // Treat an unrecognized non-standard annotation as unknown instead of failing.
             this.pairBuilder.setType(BondType.fromString(null));
         }
     }

@@ -12,7 +12,6 @@ import com.github.dockerjava.transport.DockerHttpClient;
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
 import it.unicam.cs.bdslab.extrarnas.models.StructureInfo;
 import it.unicam.cs.bdslab.extrarnas.models.StructureStatus;
-import org.apache.commons.csv.CSVFormat;
 import org.biojava.nbio.structure.Structure;
 
 import java.io.*;
@@ -20,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class DockerController {
@@ -147,8 +147,8 @@ public class DockerController {
 
     /**
      * Reads the single CSV and processes potentially many PDB rows.
-     * CSV: col0 = pdbPath (relative to /data), col1 = chainFilter (e.g., "A;B").
-     * Output: /data/preprocessed/<basename>_filtered.pdb
+     * CSV: col0 = PDB ID, col1 = auth chain filter (e.g., "A;B").
+     * Output: one PDB and one mmCIF file per retained auth chain under /data/preprocessed.
      */
     private void processCsvAndFilterPdbs(Path csvFile) throws IOException {
         var preprocessedFolder = sharedFolder.resolve("preprocessed");
@@ -168,29 +168,31 @@ public class DockerController {
 
                 String[] cols = parseRow(line);
                 if (cols.length < 2) {
-                    logger.severe("Skipping row (needs at least 2 columns): {}" + line);
+                    logger.severe("Skipping CSV row because it has fewer than two columns: " + line);
                     continue;
                 }
 
-                String pdbID = cols[0].trim();   // path relative to /data
-                String chain = cols[1].trim();  // e.g., "A;B"
+                String pdbID = cols[0].trim();   // PDB accession code
+                String chain = cols[1].trim();   // auth chain IDs, e.g. "A;B"
+                logger.info("Processing structure " + pdbID + " with requested auth chain filter: " + chain);
 
                 // Host path for reading (bind of /data)
                 Path fileToFilter = sharedFolder.resolve(pdbID + ".pdb");
                 var isPDB = true;
 
                 if (!Files.exists(fileToFilter)) {
-                    logger.info("Try to download the PDB file using PDB ID");
+                    logger.info("No local PDB file found for " + pdbID + "; downloading the structure with BioJava");
                     try {
                         fileToFilter = bioJavaController.downloadPDB(pdbID, String.valueOf(sharedFolder));
                         if (fileToFilter.toString().endsWith("cif")) {
-                            logger.info("CIF format recognized");
+                            logger.info("Structure " + pdbID + " requires mmCIF preprocessing; starting BeEM conversion");
                             isPDB = false;
                             this.beem(pdbID + ".cif");
                             this.moveFiles(pdbID);
                         }
                     } catch (Exception e) {
-                        logger.severe("ERROR: " + e);
+                        logger.log(Level.SEVERE, "Download or BeEM conversion failed for " + pdbID
+                                + " (auth chain filter " + chain + ")", e);
                         failed.add(pdbID + "," + chain + " -> download/beem: " + e.getMessage());
                         continue;
                     }
@@ -204,7 +206,7 @@ public class DockerController {
                     }
                     ok++;
                 } catch (Exception e) {
-                    logger.severe("Failed processing row: " + line + " - " + e.getMessage() + " " + e);
+                    logger.log(Level.SEVERE, "Failed processing CSV row '" + line + "'", e);
                     failed.add(pdbID + "," + chain + " -> " + e.getMessage());
                 }
             }
@@ -216,7 +218,7 @@ public class DockerController {
 
         logger.info("Preprocessing completed: " + ok + " succeeded, " + failed.size() + " failed.");
         if (!failed.isEmpty()) {
-            logger.severe("Not loaded molecule:");
+            logger.severe("Structures that could not be loaded:");
             for (String f : failed) logger.severe("  " + f);
         }
     }
@@ -293,12 +295,13 @@ public class DockerController {
                     }
                 }
                 cmd.exec();
-                logger.info("Stopped container via API: {}" + resolvedId);
+                logger.info("Stopped container via API: " + resolvedId);
                 return true;
             } else
-                logger.severe("Container not found via API: {}" + containerNameOrId);
+                logger.severe("Container not found via API: " + containerNameOrId);
         } catch (Exception apiErr) {
-            logger.severe("API stop failed (will try CLI): {}" + apiErr.toString());
+            logger.log(Level.WARNING, "Docker API stop failed for " + containerNameOrId
+                    + "; attempting the Docker CLI fallback", apiErr);
         }
 
         // 2) Fallback to CLI: docker stop <nameOrId>
@@ -311,13 +314,16 @@ public class DockerController {
             Process p = pb.inheritIO().start();
             int code = p.waitFor();
             if (code == 0) {
-                logger.info("Stopped container via CLI: {}" + containerNameOrId);
+                logger.info("Stopped container via CLI: " + containerNameOrId);
                 return true;
             } else
-                logger.severe("CLI 'docker stop' exited with {}" + code);
-        } catch (IOException | InterruptedException cliErr) {
+                logger.severe("Docker CLI stop failed for " + containerNameOrId
+                        + " with exit code " + code);
+        } catch (InterruptedException cliErr) {
             Thread.currentThread().interrupt();
-            logger.severe("CLI stop failed: {}" + cliErr);
+            logger.log(Level.SEVERE, "Interrupted while stopping Docker container " + containerNameOrId, cliErr);
+        } catch (IOException cliErr) {
+            logger.log(Level.SEVERE, "Docker CLI stop failed for " + containerNameOrId, cliErr);
         }
 
         return false;
@@ -329,8 +335,9 @@ public class DockerController {
     private String resolveContainerId(String nameOrId) {
         // Try direct inspect (works for ID or full name)
         try {
-            logger.info("Container: " + nameOrId + " - RESOLVED ID: " + dockerClient.inspectContainerCmd(nameOrId).exec().getId());
-            return dockerClient.inspectContainerCmd(nameOrId).exec().getId();
+            String resolvedId = dockerClient.inspectContainerCmd(nameOrId).exec().getId();
+            logger.info("Resolved Docker container " + nameOrId + " to ID " + resolvedId);
+            return resolvedId;
         } catch (Exception ignored) {
             // not directly resolvable; try listing
         }
@@ -416,7 +423,7 @@ public class DockerController {
     }
 
     public void beem(String cifFile) throws InterruptedException {
-        logger.info("USING BeEM to convert " + cifFile + " to PDB");
+        logger.info("Running BeEM conversion from mmCIF to bundled PDB files: " + cifFile);
         // call BeEM
         String shellCmd = "cd /data && /home/BeEM/BeEM" + " " + cifFile;
 
@@ -457,58 +464,25 @@ public class DockerController {
         }
         var formattedMappingPath = originalMappingPath.getParent().resolve(pdbID + "-pdb-mapping.csv");
         // reformat mapping
-        var bundles = reformatCSV(originalMappingPath, formattedMappingPath);
+        var conversion = BeemMappingParser.convertToCsv(originalMappingPath, formattedMappingPath);
+        logger.info("Converted BeEM mapping for " + pdbID + ": "
+                + conversion.mappingCount() + " chain mappings across "
+                + conversion.bundlePaths().size() + " bundles");
         // move bundles using mapping
-        for (var b : bundles) {
+        for (var b : conversion.bundlePaths()) {
+            if (!Files.isRegularFile(b)) {
+                throw new FileNotFoundException("BeEM bundle listed in the mapping was not created: " + b);
+            }
             var target = sharedFolder.resolve("bundles").resolve(b.getFileName());
             Files.move(b, target, StandardCopyOption.REPLACE_EXISTING);
+            logger.info("Moved BeEM bundle for " + pdbID + ": " + b.getFileName() + " -> " + target);
         }
         // move mapping
-        Files.move(formattedMappingPath, sharedFolder.resolve("mappings").resolve(formattedMappingPath.getFileName()), StandardCopyOption.REPLACE_EXISTING);
-    }
-
-    private Set<Path> reformatCSV(Path inputPath, Path outputPath) {
-        try (BufferedReader reader = Files.newBufferedReader(inputPath);
-             BufferedWriter writer = Files.newBufferedWriter(outputPath)) {
-
-            writer.write("File,New_chain_ID,Original_chain_ID");
-            writer.newLine();
-
-            String currentFile = null;
-            var bundlePaths = new HashSet<Path>();
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-
-                // Skip header and empty lines
-                if (line.isEmpty() || line.contains("New chain ID")) {
-                    continue;
-                }
-
-                // Detect new PDB section (e.g., "3j6b-pdb-bundle1.pdb:")
-                if (line.contains(".pdb:")) {
-                    currentFile = line.substring(0, line.length() - 1).trim();
-                    bundlePaths.add(inputPath.getParent().resolve(currentFile));
-                    continue;
-                }
-
-                // Expect two columns separated by spaces
-                String[] parts = line.split("\\s+");
-                if (parts.length == 2) {
-                    writer.write(String.format("%s,%s,%s", currentFile, parts[0], parts[1]));
-                    writer.newLine();
-                }
-            }
-            Files.delete(inputPath);
-
-            System.out.println("Reformatted CSV written to: " + outputPath.toAbsolutePath());
-            System.out.println("Deleted original mapping: " + inputPath.toAbsolutePath());
-            return bundlePaths;
-        } catch (IOException e) {
-            System.err.println("Error processing " + inputPath + ": " + e.getMessage());
-            return null;
-        }
+        var targetMapping = sharedFolder.resolve("mappings").resolve(formattedMappingPath.getFileName());
+        Files.move(formattedMappingPath, targetMapping, StandardCopyOption.REPLACE_EXISTING);
+        Files.delete(originalMappingPath);
+        logger.info("Stored converted BeEM mapping for " + pdbID + ": " + targetMapping);
+        logger.info("Removed original BeEM text mapping after successful conversion: " + originalMappingPath);
     }
 
     public static DockerController getInstance() {
@@ -517,166 +491,160 @@ public class DockerController {
     }
 
     private void filterPDB(String chain, String pdbID, Path preprocessedFolder, Path src) throws Exception {
+        logger.info("Filtering local PDB structure " + pdbID + " from " + src
+                + " using auth chain filter " + chain);
         var filteredFiles = chain.equals("*")
                 ? bioJavaController.filterByStar(src)
                 : bioJavaController.filterById(src, chain);
 
+        if (filteredFiles.isEmpty()) {
+            throw new IOException("No RNA chains matched auth chain filter " + chain
+                    + " in PDB structure " + pdbID);
+        }
+
         for (var f : filteredFiles) {
             save(f, preprocessedFolder, pdbID);
         }
-    }
-
-    /**
-     * Reads from the CIF file the label_asym_id -> auth_asym_id.
-     * Because in the CSV file is used the RCSB labling (e.g. "CB")
-     * but BeEM uses the 1 char labling.
-     * So the map should be used to rename chains where: label != auth.
-     */
-    private Map<String, String> buildLabelToAuthMap(Path cifFile) throws IOException {
-        Map<String, String> labelToAuth = new HashMap<>();
-
-        // Find the order of the columns in the '_atom_site' loop
-        List<String> columns = new ArrayList<>();
-        boolean inAtomSiteHeader = false;
-
-        try (BufferedReader br = Files.newBufferedReader(cifFile, StandardCharsets.UTF_8)) {
-            String line;
-            int labelIdx = -1, authIdx = -1;
-
-            while ((line = br.readLine()) != null) {
-                String trimmed = line.trim();
-
-                // store the column header _atom_site.*
-                if (trimmed.startsWith("_atom_site.")) {
-                    columns.add(trimmed);
-                    inAtomSiteHeader = true;
-                    if (trimmed.equals("_atom_site.label_asym_id")) labelIdx = columns.size() - 1;
-                    if (trimmed.equals("_atom_site.auth_asym_id"))  authIdx  = columns.size() - 1;
-                    continue;
-                }
-
-                // First row of ATOM/HETATM: after there are only coordinates
-                if (inAtomSiteHeader && (trimmed.startsWith("ATOM") || trimmed.startsWith("HETATM"))) {
-                    if (labelIdx < 0 || authIdx < 0) {
-                        throw new IOException("Colonne label/auth_asym_id non trovate nel CIF: " + cifFile);
-                    }
-                    // Process this row and the next ATOM/HETATM
-                    do {
-                        String[] tok = trimmed.split("\\s+");
-                        if (tok.length > Math.max(labelIdx, authIdx)) {
-                            labelToAuth.putIfAbsent(tok[labelIdx], tok[authIdx]);
-                        }
-                        line = br.readLine();
-                        if (line == null) break;
-                        trimmed = line.trim();
-                    } while (trimmed.startsWith("ATOM") || trimmed.startsWith("HETATM"));
-                    break; // Atom block ended
-                }
-            }
-        }
-        return labelToAuth;
+        logger.info("Completed PDB filtering for " + pdbID + "; saved "
+                + filteredFiles.size() + " RNA chains");
     }
 
     private void filterCIF(String chain, String pdbID, Path preprocessedFolder) throws Exception {
         var mapping = sharedFolder.resolve("mappings").resolve(pdbID + "-pdb-mapping.csv");
         var bundles = sharedFolder.resolve("bundles");
 
-        // --- TRADUZIONE label -> auth dal CIF originale ---
-        var cifFile = sharedFolder.resolve(pdbID + ".cif");
-        Set<String> requestedChains;
-        // mappa auth_asym_id -> label originale del CSV, per mostrare la catena come l'utente l'ha richiesta
-        Map<String, String> authToLabel = new HashMap<>();
-        if (chain.equals("*")) {
-            requestedChains = null;
+        Set<String> requestedAuthChains = parseRequestedAuthChains(chain);
+        List<BeemMappingParser.Entry> allMappings = BeemMappingParser.readCsv(mapping);
+        List<BeemMappingParser.Entry> selectedMappings =
+                BeemMappingParser.selectByOriginalAuthChains(allMappings, requestedAuthChains);
+
+        if (requestedAuthChains != null) {
+            Set<String> mappedAuthChains = new HashSet<>();
+            selectedMappings.forEach(entry -> mappedAuthChains.add(entry.originalChainId()));
+            Set<String> missingAuthChains = new LinkedHashSet<>(requestedAuthChains);
+            missingAuthChains.removeAll(mappedAuthChains);
+            if (!missingAuthChains.isEmpty()) {
+                throw new IOException("Requested auth chains are absent from the BeEM mapping for "
+                        + pdbID + ": " + missingAuthChains);
+            }
+        }
+
+        if (selectedMappings.isEmpty()) {
+            throw new IOException("No BeEM chain mappings selected for " + pdbID
+                    + " using auth chain filter " + chain);
+        }
+
+        Map<String, List<BeemMappingParser.Entry>> mappingsByBundle = new LinkedHashMap<>();
+        for (var entry : selectedMappings) {
+            mappingsByBundle.computeIfAbsent(entry.bundleFile(), ignored -> new ArrayList<>()).add(entry);
+        }
+        logger.info("Selected " + selectedMappings.size() + " of " + allMappings.size()
+                + " BeEM chain mappings for " + pdbID + " across " + mappingsByBundle.size()
+                + " bundles using auth chain filter " + chain);
+
+        Set<String> savedAuthChains = new LinkedHashSet<>();
+        for (var bundleEntry : mappingsByBundle.entrySet()) {
+            String bundle = bundleEntry.getKey();
+            List<BeemMappingParser.Entry> bundleMappings = bundleEntry.getValue();
+            String newChains = bundleMappings.stream()
+                    .map(BeemMappingParser.Entry::newChainId)
+                    .reduce((left, right) -> left + ";" + right)
+                    .orElseThrow();
+            Map<String, String> originalChainByNewChain = new HashMap<>();
+            bundleMappings.forEach(entry -> originalChainByNewChain.put(
+                    entry.newChainId(), entry.originalChainId()));
+
+            var bundlePath = bundles.resolve(bundle);
+            if (!Files.isRegularFile(bundlePath)) {
+                throw new FileNotFoundException("BeEM bundle is missing for " + pdbID + ": " + bundlePath);
+            }
+
+            String selectedDescription = bundleMappings.stream()
+                    .map(entry -> entry.originalChainId() + "->" + entry.newChainId())
+                    .reduce((left, right) -> left + ", " + right)
+                    .orElse("");
+            logger.info("Filtering BeEM bundle " + bundle + " for " + pdbID
+                    + " with auth->bundle chain mappings: " + selectedDescription);
+
+            var filteredFiles = bioJavaController.filterById(bundlePath, newChains);
+            logger.info("BioJava retained " + filteredFiles.size() + " RNA chains from bundle "
+                    + bundle + " for " + pdbID);
+
+            for (var structure : filteredFiles) {
+                var filteredChain = structure.getChains().get(0);
+                String newChainId = filteredChain.getName();
+                String originalAuthChain = originalChainByNewChain.get(newChainId);
+                if (originalAuthChain == null) {
+                    newChainId = filteredChain.getId();
+                    originalAuthChain = originalChainByNewChain.get(newChainId);
+                }
+                if (originalAuthChain == null) {
+                    throw new IOException("BioJava returned an unmapped chain from bundle " + bundle
+                            + " for " + pdbID + ": name=" + filteredChain.getName()
+                            + ", id=" + filteredChain.getId());
+                }
+
+                save(structure, preprocessedFolder, pdbID, originalAuthChain, newChainId, bundle);
+                savedAuthChains.add(originalAuthChain);
+            }
+        }
+
+        if (requestedAuthChains == null) {
+            if (savedAuthChains.isEmpty()) {
+                throw new IOException("No RNA chains were retained from any BeEM bundle for " + pdbID);
+            }
         } else {
-            var labelToAuth = buildLabelToAuthMap(cifFile);
-            requestedChains = new HashSet<>();
-            for (String c : chain.split(";")) {
-                c = c.trim();
-                if (c.isEmpty()) continue;
-                // se il label esiste nel CIF, usa l'auth corrispondente; altrimenti tieni com'è
-                String auth = labelToAuth.getOrDefault(c, c);
-                requestedChains.add(auth);
-                authToLabel.put(auth, c);   // es. "2" -> "CB"
-                if (!auth.equals(c)) {
-                    logger.info("Catena tradotta label->auth: " + c + " -> " + auth + " (pdb " + pdbID + ")");
-                }
+            Set<String> unsavedAuthChains = new LinkedHashSet<>(requestedAuthChains);
+            unsavedAuthChains.removeAll(savedAuthChains);
+            if (!unsavedAuthChains.isEmpty()) {
+                throw new IOException("Requested auth chains were found in the BeEM mapping but were not retained "
+                        + "as RNA chains by BioJava for " + pdbID + ": " + unsavedAuthChains);
             }
         }
 
-        try (Reader reader = Files.newBufferedReader(mapping)) {
-            var format = CSVFormat.DEFAULT.builder()
-                    .setHeader()
-                    .setSkipHeaderRecord(true)
-                    .build();
+        logger.info("Completed BeEM bundle filtering for " + pdbID + "; saved auth chains: " + savedAuthChains);
+    }
 
-            var records = format.parse(reader);
+    private Set<String> parseRequestedAuthChains(String chainFilter) throws IOException {
+        if (chainFilter.equals("*")) {
+            return null;
+        }
 
-            var newChainIds = new HashMap<String, String>();
-            var originalChainIds = new HashMap<String, String>();
-
-
-            for (var r : records) {
-                var file = r.get("File").trim();
-                var newChainId = r.get("New_chain_ID").trim();
-                var originalChainId = r.get("Original_chain_ID").trim();
-
-                // skip rows not matching the specified chain (if '*' requestedChains is null)
-                if (requestedChains != null && !requestedChains.contains(originalChainId)) {
-                    continue;
-                }
-                // append newChainId with semicolon
-                newChainIds.merge(file, newChainId, (oldVal, newVal) -> oldVal + ";" + newVal);
-
-                // store mapping from new to original chain
-                originalChainIds.put(newChainId, originalChainId);
-            }
-
-            // Process each file
-            for (var entry : newChainIds.entrySet()) {
-                var bundle = entry.getKey();
-                var newChains = entry.getValue();
-
-                if (newChains == null || newChains.isBlank()) {
-                    continue; // no requested chain in this bundle 
-                }
-
-                var bundlePath = bundles.resolve(bundle);
-                if (!Files.exists(bundlePath)) {
-                    logger.severe("Bundle mancante: " + bundlePath + " (pdb " + pdbID + ")");
-                    continue;
-                }
-
-                var filteredFiles = bioJavaController.filterById(bundlePath, newChains);
-
-                for (var f : filteredFiles) {
-                    save(f, preprocessedFolder, pdbID, authToLabel);
-                }
+        Set<String> requestedAuthChains = new LinkedHashSet<>();
+        for (String chain : chainFilter.split(";")) {
+            String trimmed = chain.trim();
+            if (!trimmed.isEmpty()) {
+                requestedAuthChains.add(trimmed);
             }
         }
+        if (requestedAuthChains.isEmpty()) {
+            throw new IOException("The auth chain filter is empty");
+        }
+        return requestedAuthChains;
     }
 
     private void save(Structure f, Path preprocessedFolder, String pdbID) throws Exception {
-        // this save is used when a PDB file is translated into its chains
-        // e.g. 4PLX.pdb -> 4PLX_A.pdb , 4PLX_B.pdb && 4PLX_A.cif , 4PLX_B.cif
-        var chainId = f.getChains().get(0).getId();
+        // A legacy PDB chain corresponds to the auth chain used in the CSV input.
+        var chain = f.getChains().get(0);
+        var chainId = chain.getName() == null || chain.getName().isBlank()
+                ? chain.getId()
+                : chain.getName();
         var dst = preprocessedFolder.resolve(pdbID
                 + "_"
                 + chainId);
         bioJavaController.save(f, dst);
-        logger.info("Wrote filtered PDB and CIF: " + dst);
+        logger.info("Saved filtered RNA structure for " + pdbID + ": auth chain " + chainId
+                + ", source PDB " + pdbID + ", output base path " + dst);
     }
 
-    private void save(Structure f, Path preprocessedFolder, String pdbID, Map<String, String> authToLabel) throws Exception {
-        // this save is used when a CIF file is translated into its chains
-        // e.g. 4PLX.cif -> 4PLX_A.pdb , 4PLX_B.pdb && 4PLX_A.cif , 4PLX_B.cif
-        var chain = f.getChains().get(0);
-        var authId = chain.getName();   // auth_asym_id (e.g. "2")
-        // Shows the label in the CSV (e.g. "CB"); with authId as fallback
-        var label = authToLabel.getOrDefault(authId, authId);
-        var dst = preprocessedFolder.resolve(pdbID + "_" + label);
-        bioJavaController.save(f, dst);
-        logger.info("Wrote filtered PDB and CIF: " + dst);
+    private void save(Structure structure, Path preprocessedFolder, String pdbID,
+                      String originalAuthChain, String bundleChain, String bundleFile) throws Exception {
+        // Keep the BeEM one-character chain inside the PDB, but use the original auth chain in the output name.
+        var dst = preprocessedFolder.resolve(pdbID + "_" + originalAuthChain);
+        bioJavaController.save(structure, dst);
+        logger.info("Saved filtered RNA structure for " + pdbID + ": auth chain " + originalAuthChain
+                + ", bundle chain " + bundleChain + ", source bundle " + bundleFile
+                + ", output base path " + dst);
     }
 
     private void deleteDirectoryRecursively(Path dir) throws IOException {

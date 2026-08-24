@@ -46,7 +46,7 @@ public class RNASecondaryStructurePrinterTest {
     @Test
     @DisplayName("canonical BPSEQ: a pair cWW produce two rows with correct indexes")
     void canonicalSinglePair() {
-        // pos 0 (G) - pos 5 (C), cWW => indici 1-based: 1 e 6
+        // Position 0 (G) - position 5 (C), cWW => 1-based indices: 1 and 6.
         Pair p = new Pair(0, 5, "G", "C", BondType.LEONTIS_WESTHOF_cWW);
         ExtendedRNASecondaryStructure s = new ExtendedRNASecondaryStructure.Builder()
                 .setSequence("GAAAAC")
@@ -56,16 +56,16 @@ public class RNASecondaryStructurePrinterTest {
         String result = exporter.printCanonicalBPSEQ(s);
         String[] lines = result.strip().split("\n");
 
-        // Devono esserci esattamente 2 righe (le posizioni 1 e 6 sono appaiate)
+        // There must be exactly two rows because positions 1 and 6 are paired.
         assertEquals(2, lines.length);
 
-        // prima riga: posizione 1, G, partner 6
+        // First row: position 1, G, partner 6.
         String[] col1 = lines[0].split(" ");
         assertEquals("1", col1[0]);
         assertEquals("G", col1[1]);
         assertEquals("6", col1[2]);
 
-        // seconda riga: posizione 6, C, partner 1
+        // Second row: position 6, C, partner 1.
         String[] col2 = lines[1].split(" ");
         assertEquals("6", col2[0]);
         assertEquals("C", col2[1]);
@@ -139,7 +139,7 @@ public class RNASecondaryStructurePrinterTest {
         ExtendedRNASecondaryStructure s = new ExtendedRNASecondaryStructure.Builder().setSequence("GAUC").build();
 
         String result = exporter.printExtendedBPSEQ(s);
-        // La prima riga è l'intestazione; le successive sono dati
+        // The first row is the header; the following rows contain data.
         result
                 .lines()
                 .skip(1)
@@ -180,7 +180,7 @@ public class RNASecondaryStructurePrinterTest {
     @Test
     @DisplayName("extended BPSEQ: cWW pair produce the correct partner in the column cWW")
     void extendedBpseqCWWPartner() {
-        // pos 0 (G) appaiata a pos 3 (C) con cWW
+        // Position 0 (G) is paired with position 3 (C) using cWW.
         Pair p = new Pair(0, 3, "G", "C", BondType.LEONTIS_WESTHOF_cWW);
         ExtendedRNASecondaryStructure s = new ExtendedRNASecondaryStructure.Builder()
                 .setSequence("GAUC")
@@ -188,7 +188,7 @@ public class RNASecondaryStructurePrinterTest {
                 .build();
 
         String result = exporter.printExtendedBPSEQ(s);
-        // La riga della posizione 1 (indice 0) deve avere "4" nella colonna cWW (indice 2)
+        // The row for position 1 (index 0) must contain "4" in the cWW column (index 2).
         String firstDataLine = result.lines().skip(1).findFirst().orElse("");
         String[] cols = firstDataLine.split("\\s+");
 
@@ -219,12 +219,12 @@ public class RNASecondaryStructurePrinterTest {
     @Test
     @DisplayName("extended BPSEQ: without explicit sequence reconstruct 'N' in the unknown positions")
     void extendedBpseqReconstructSequenceWithN() {
-        // Coppia tra pos 0 e pos 2 con nucleotidi noti; pos 1 non è in nessuna coppia
+        // Pair positions 0 and 2 with known nucleotides; position 1 is not part of any pair.
         Pair p = new Pair(0, 2, "G", "C", BondType.LEONTIS_WESTHOF_cWW);
         ExtendedRNASecondaryStructure s = new ExtendedRNASecondaryStructure.Builder().addPair(p).build();
 
         String result = exporter.printExtendedBPSEQ(s);
-        // Riga indice 2 (pos 1): nucleotide deve essere N
+        // Row index 2 (position 1): the nucleotide must be N.
         String secondLine = result.lines().skip(2).findFirst().orElse("");
         String[] cols = secondLine.split("\\s+");
         assertEquals("N", cols[1], "The position without nucleotide should be 'N'");
@@ -237,7 +237,7 @@ public class RNASecondaryStructurePrinterTest {
     @Test
     @DisplayName("extended BPSEQ: position with two partner cWW listed with comma")
     void extendedBpseqMultiplePartnersCommaList() {
-        // pos 0 appaiata sia con pos 3 che con pos 5 entrambe cWW
+        // Position 0 is paired with both positions 3 and 5 using cWW.
         Pair p1 = new Pair(0, 3, "G", "C", BondType.LEONTIS_WESTHOF_cWW);
         Pair p2 = new Pair(0, 5, "G", "C", BondType.LEONTIS_WESTHOF_cWW);
 
@@ -251,7 +251,7 @@ public class RNASecondaryStructurePrinterTest {
         String firstDataLine = result.lines().skip(1).findFirst().orElse("");
         String[] cols = firstDataLine.split("\\s+");
 
-        // La colonna cWW (indice 2) deve contenere "4,6" o "6,4"
+        // The cWW column (index 2) must contain either "4,6" or "6,4".
         String cWWCol = cols[2];
         assertTrue(
                 cWWCol.contains("4") && cWWCol.contains("6") && cWWCol.contains(","),
