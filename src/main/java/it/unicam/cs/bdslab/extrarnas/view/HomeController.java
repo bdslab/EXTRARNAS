@@ -42,11 +42,11 @@ import javafx.stage.FileChooser;
 import static it.unicam.cs.bdslab.extrarnas.view.utils.TOOL.*;
 
 public class HomeController {
-    public static final Logger logger = Logger.getLogger("it.unicam.cs.bdslab.tarnas.view.HomeController");
+    public static final Logger logger = Logger.getLogger("it.unicam.cs.bdslab.extrarnas.view.HomeController");
 
-    public static final String dockerAllToolsImage = "tarnas2.0-image";
-    public static final String dockerAllToolsImageTag = "latest";
-    public static final String dockerAllToolsContainer = "tarnas2.0-container";
+    public static final String dockerAllToolsImage = "extrarnas-core";
+    public static final String dockerAllToolsImageTag = "1.0.2-cibb2026";
+    public static final String dockerAllToolsContainer = "extrarnas-core-container";
     public static final String dockerfileAllToolsPath = "./docker/all-tools";
 
     private IOController ioController;

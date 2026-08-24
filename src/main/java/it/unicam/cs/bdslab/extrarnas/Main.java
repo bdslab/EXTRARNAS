@@ -29,14 +29,14 @@ import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
 /**
- * TARNAS JavaFX App
+ * EXTRARNAS JavaFX application.
  *
  * @author Piero Hierro, Piermichele Rosati
  */
 
 public class Main extends Application {
     public static Main instance;
-    public static final Logger logger = Logger.getLogger("it.unicam.cs.bdslab.tarnas.main");
+    public static final Logger logger = Logger.getLogger("it.unicam.cs.bdslab.extrarnas.main");
     private Stage stage;
 
     @Override

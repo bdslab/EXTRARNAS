@@ -51,6 +51,7 @@ public class DockerController {
 
     public int buildDockerContainerBy(File dockerContext, String imageName, String imageTag, String containerName, Path sharedFolder) throws IOException, InterruptedException {
         this.sharedFolder = sharedFolder;
+        String imageReference = imageName + ":" + imageTag;
         // Build the image
         List<Image> images = dockerClient.listImagesCmd().exec();
         boolean imageExists = false;
@@ -59,8 +60,9 @@ public class DockerController {
                 String[] tags = image.getRepoTags();
                 if (tags != null) {
                     for (String tag : tags) {
-                        if ((imageName + ":" + imageTag).equals(tag)) {
-                            logger.info("Image found with ID: " + image.getId());
+                        if (imageReference.equals(tag)) {
+                            imageExists = true;
+                            logger.info("Docker image " + imageReference + " found with ID " + image.getId());
                             break;
                         }
                     }
@@ -69,9 +71,12 @@ public class DockerController {
         }
 
         if (!imageExists) {
-            logger.info("Building image...");
-            String imageId = dockerClient.buildImageCmd(dockerContext).withTags(Set.of(imageName)).exec(new BuildImageResultCallback()).awaitImageId();
-            logger.info("Image built: " + imageId);
+            logger.info("Docker image " + imageReference + " was not found; building it from " + dockerContext);
+            String imageId = dockerClient.buildImageCmd(dockerContext)
+                    .withTags(Set.of(imageReference))
+                    .exec(new BuildImageResultCallback())
+                    .awaitImageId();
+            logger.info("Built Docker image " + imageReference + " with ID " + imageId);
         }
 
         // Define shared folder (host and container paths)
@@ -84,7 +89,8 @@ public class DockerController {
                 );
 
 
-        container = dockerClient.createContainerCmd(imageName).withName(containerName).withHostConfig(hostConfig).exec();
+        logger.info("Creating Docker container " + containerName + " from image " + imageReference);
+        container = dockerClient.createContainerCmd(imageReference).withName(containerName).withHostConfig(hostConfig).exec();
 
         // Start the container
         dockerClient.startContainerCmd(container.getId()).exec();

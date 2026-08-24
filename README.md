@@ -46,6 +46,7 @@ In EXTRARNAS, **Canonical base pairs** correspond strictly to standard cis Watso
 ## The Role of Docker
 
 EXTRARNAS leverages **Docker containers** to run its underlying analysis tools.
+The standard analysis environment is provided by the `extrarnas-core` image and is tagged with the EXTRARNAS release, for example `extrarnas-core:1.0.2-cibb2026`. Optional tools with separate licensing requirements, such as X3DNA-DSSR, use dedicated images.
 Using containers guarantees that:
 - You do not need to manually install complex third-party tools, compilers, or specific language versions (such as old Python versions) on your machine.
 - Executions are perfectly reproducible and run in an isolated environment.
