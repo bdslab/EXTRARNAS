@@ -60,7 +60,7 @@
 }
 
 /* Checkbox selected style */
-.checkbox:selected {
+.check-box:selected {
     -fx-background-color: white;    /* White background when selected */
     -fx-text-fill: black;           /* Black text when selected */
 }
