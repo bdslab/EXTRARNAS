@@ -44,6 +44,9 @@ import java.util.stream.Collectors;
 
 import javafx.stage.FileChooser;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
 import static it.unicam.cs.bdslab.extrarnas.view.utils.TOOL.*;
 
 public class HomeController {
@@ -735,6 +738,24 @@ public class HomeController {
     }
 
     /**
+     * Loads an HTML file from the application resources.
+     *
+     * @param resourcePath absolute classpath path, e.g. /html/help.html
+     * @return the HTML content as a String
+     */
+    private String loadHtmlResource(String resourcePath) {
+        try (InputStream inputStream = getClass().getResourceAsStream(resourcePath)) {
+            if (inputStream == null) {
+                throw new IllegalArgumentException("HTML resource not found: " + resourcePath);
+            }
+
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to load HTML resource: " + resourcePath, e);
+        }
+    }
+
+    /**
      * 
      * General method to display a resizable Alert dialog with HTML content.
      *
@@ -774,7 +795,7 @@ public class HomeController {
                         Desktop.getDesktop().browse(new URI(newLocation)); // Open the URL in the default system browser
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    logger.log(Level.WARNING, "Unable to open URL: " + newLocation, e);
                 }
                 webEngine.loadContent(htmlContent); // Prevent navigation in the WebView by reloading the original
                                                     // content
@@ -790,108 +811,31 @@ public class HomeController {
 
     @FXML
     public void handleHelp() {
-        String helpContent = """
-                            <h2>General information</h2>
-                               EXTRARNAS (Extract RNA Structures) is a Java application designed to analyze RNA 3D structures and extract their secondary structures and base-pairing interactions. It provides a guided interface to configure and run specialized bioinformatics tools inside isolated Docker environments, generating standardized outputs.
-                               <br><br>
-                               <h2>How to use EXTRARNAS</h2>
-                                       There are a few main steps for using the EXTRARNAS application:
-                                       <ol>
-                                           <li>Workspace Setup: select the local directory to share with the Docker container for passing inputs and retrieving outputs.</li>
-                                           <li>Tool Selection: choose the structural analysis tool you want to launch.</li>
-                                           <li>Structure Analysis Level: choose between Secondary Structure (classical pairings) or Extended Secondary Structure (non-canonical interactions).</li>
-                                           <li>Output Formats: Output supports BPSEQ (standard canonical) and Extended BPSEQ (including all bounds).</li>
-                                       </ol>
-                                       <em>RNA secondary structure translations scenario.</em>
-                                       <br><br>
-                                       Step 1. In the first step of this scenario, a user should upload the RNA secondary structure provided
-                                       in a supported format.
-                                       <br>The file can be uploaded directly from a local drive (use the &quot;Browse&quot; button
-                                       to browse through the local repositories).
-                                       <br>There are two examples stored in the system and ready for
-                                       processing. Uploaded data can be viewed in the text area after clicking the &quot;Preview&quot; button and
-                                       edited before further processing.
-                                       <br><br>
-                                       Step 2. In this step, the user can decide whether to include or not the header and the output format.
-                                       <br>The user selects the additional option &quot;include reader&quot; to include the header and the format in the
-                                       dropdown menu.
-                                       <br><br>
-                                       Step 3. To start the transformation of secondary structure, the &quot;Run&quot; button should be clicked.
-                                       <br><br>
-                                       <em>Deleting or retaining comments, blank lines and headers of the file.</em>
-                                       <br><br>
-                                       Step 1. In the first step of this scenario, a user should upload the RNA secondary structure provided
-                                       in a supported format.
-                                       <br>The file can be uploaded directly from a local drive (use the &quot;Browse&quot; button
-                                       to browse through the local repositories).
-                                       <br>There are two examples stored in the system and ready for
-                                       processing. Uploaded data can be viewed in the text area after clicking the &quot;Preview&quot; button and
-                                       edited before further processing.
-                                       <br><br>
-                                       Step 2. In this step, the user can decide to remove all comments, lines containing a particular word
-                                       or empty lines by selecting the relative option.
-                                       <br>If the user intends to delete lines containing a particular word, it is necessary to specify the word in the box.
-                                       <br><br>
-                                       Step 3. To start editing or delete the comments, the &quot;Run&quot; button should be clicked.
-                                       <br><br>
-                                       <em>Abstracting RNA secondary structures into three views: Core, Core Plus and Shape</em>
-                                       <br><br>
-                                       Step 1. In the first step of this scenario, a user should upload the RNA secondary structure provided
-                                       in a supported format.
-                                       <br>The file can be uploaded directly from a local drive (use the &quot;Browse&quot; button
-                                       to browse through the local repositories).
-                                       <br>There are two examples stored in the system and ready for
-                                       processing. Uploaded data can be viewed in the text area after clicking the &quot;Preview&quot; button and
-                                       edited before further processing.
-                                       <br><br>
-                                       Step 2. In this step, the user can decide the type of abstractions, such as Core, Core Plus, or Shape by selecting the corresponding option.
-                                       <br><br>
-                                       Step 3. To start editing or delete the comments, the &quot;Run&quot; button should be clicked.
-                """;
-
-        showAlertWithContent("Help", "How to Use This Application", helpContent);
+        String helpContent = loadHtmlResource("/html/help.html");
+        showAlertWithContent(
+                "Help",
+                "How to Use This Application",
+                helpContent
+        );
     }
 
     @FXML
     public void handleAbout() {
-        String aboutContent = """
-                        <h2>About EXTRARNAS</h2>EXTRARNAS is a tool that analyzes RNA 3D structures and extracts their secondary structures using specialized bioinformatics tools in containerized environments.
-                              <br>
-                              It allows users to extract secondary structures and base-pairing interactions, ranging from canonical A-U, G-C, G-U pairs to fully extended non-canonical bounds.
-                              <br>EXTRARNAS is developed as a standalone desktop application.
-                              <br>It currently leverages Docker to execute tools like x3dna-dssr and others in isolated, perfectly reproducible environments.
-                             <br><br>
-                        <h2>Citations</h2>
-                        Any published work that has made use of EXTRARNAS may cite the following paper:
-                            <br><br>
-                            EXTRARNAS, a tool for RNA Structures Extraction.
-                        <br><br>
-                        <h2>Acknowledgements and Funding</h2><em>This work was supported by the European Union - Next-Generation EU - National Recovery and
-                            Resilience Plan (NRRP) - MISSION 4 COMPONENT 2, INVESTMENT N. 1.1, CALL PRIN 2022
-                            PNRR D.D. 1409 of 14th Sep 2022 - RNA2FUN CUP N. J53D23014960001- RNA2Fun:
-                            <a href="https://bdslab.unicam.it/rna2fun/" target="_blank">https://bdslab.unicam.it/rna2fun/</a></em>
-                """;
-
-        showAlertWithContent("About EXTRARNAS", "About This Application", aboutContent);
+        String aboutContent = loadHtmlResource("/html/about.html");
+        showAlertWithContent(
+                "About EXTRARNAS",
+                "About This Application",
+                aboutContent
+        );
     }
 
     @FXML
     public void handleContactUs() {
-        String contactUsContent = """
-                <h2>Contact Us</h2>
-                        <b class="bigger_text">EXTRARNAS has been realised within the <a href="http://www.emanuelamerelli.eu/bigdata/doku.php" target="_blank">BioShape and Data Science Lab</a> with the contribution of Piero Jean Pier Hierro Canchari, Michela Quadrini, Piermichele Rosati, Di Petta Federico and Luca Tesei.</b>
-                        <p>Lab website: <a href="https://bdslab.unicam.it" target="_blank">https://bdslab.unicam.it</a></p>
-
-                        <p>RNA2Fun Project website: <a href="https://bdslab.unicam.it/rna2fun/" target="_blank">https://bdslab.unicam.it/rna2fun/</a></p>
-
-                        <b class="bigger_text">For any issue, please contact:</b>
-                        <p>Prof. Luca Tesei</p>
-                        <p>email: luca.tesei&#64;unicam.it</p>
-
-                        <p>address: School of Sciences and Technology, Via Madonna delle Carceri 7, 62032, Camerino (MC), Italy</p>
-
-                        <p>Personal website: <a href="http://www.lucatesei.com" target="_blank">http://www.lucatesei.com</a></p>
-                """;
-        showAlertWithContent("About EXTRARNAS", "Contact Us", contactUsContent);
+        String contactUsContent = loadHtmlResource("/html/contact.html");
+        showAlertWithContent(
+                "Contact EXTRARNAS",
+                "Contact Us",
+                contactUsContent
+        );
     }
 }

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EXTRARNAS Help</title>
+</head>
+<body>
+
+<h2>General information</h2>
+<p>
+    EXTRARNAS (Tool for the Analysis of RNA Structures) is a Java application designed to analyze
+    RNA 3D structures and extract their secondary structures and base-pairing interactions.
+    It provides a guided interface to configure and run specialized bioinformatics tools inside
+    isolated environments, generating standardized outputs.
+</p>
+
+<h2>How to use EXTRARNAS</h2>
+<p>The typical EXTRARNAS workflow consists of the following steps:</p>
+
+<ol>
+    <li>
+        <strong>Shared Volume / Workspace Setup:</strong>
+        select a local directory to be shared with the Docker container. This directory is used
+        to pass input data to the analysis tools and retrieve their outputs.
+    </li>
+
+    <li>
+        <strong>Add CSV Molecules List:</strong>
+        select a CSV file containing the RNA structures to analyze. The file must contain two
+        columns, <code>id</code> and <code>chain</code>.
+        <ul>
+            <li><code>id</code> is the four-character PDB identifier.</li>
+            <li>
+                <code>chain</code> is the author/PDB chain identifier
+                (<code>_atom_site.auth_asym_id</code>).
+                <strong>Do not use</strong> the mmCIF <code>_atom_site.label_asym_id</code>.
+            </li>
+            <li>Chain identifiers are case-sensitive.</li>
+            <li>Use semicolons to request multiple chains, for example <code>BB;DB</code>.</li>
+            <li>Use <code>*</code> to process all RNA chains in the structure.</li>
+        </ul>
+
+        <p>Example:</p>
+
+        <table border="1" cellspacing="0" cellpadding="4">
+            <tr>
+                <th>id</th>
+                <th>chain</th>
+            </tr>
+            <tr>
+                <td>4PLX</td>
+                <td>A</td>
+            </tr>
+            <tr>
+                <td>6QNR</td>
+                <td>A</td>
+            </tr>
+            <tr>
+                <td>4V5K</td>
+                <td>BB;DB</td>
+            </tr>
+            <tr>
+                <td>2KOC</td>
+                <td>*</td>
+            </tr>
+        </table>
+
+        <p>
+            The CSV file itself does not need to be stored inside the shared workspace because it
+            is read by the EXTRARNAS host application. Local PDB files referenced by their IDs,
+            however, must be placed in the shared workspace so that Docker-based tools can access them.
+        </p>
+
+        <p>
+            Structures already present in the workspace <code>preprocessed</code> folder are restored
+            when EXTRARNAS starts. Deleting a structure from the table also removes its generated
+            PDB and mmCIF files from <code>preprocessed</code>.
+        </p>
+    </li>
+
+    <li>
+        <strong>Tool Selection:</strong>
+        choose the structural analysis tool to run.
+    </li>
+
+    <li>
+        <strong>Structure Analysis Level:</strong>
+        <ul>
+            <li>
+                <strong>Secondary Structure:</strong>
+                analyzes and extracts canonical cis Watson&ndash;Crick base pairs.
+            </li>
+            <li>
+                <strong>Extended Secondary Structure:</strong>
+                extracts all Leontis&ndash;Westhof base-pair types.
+            </li>
+        </ul>
+    </li>
+
+    <li>
+        <strong>Output Format:</strong>
+        <ul>
+            <li>
+                <strong>BPSEQ:</strong>
+                standard output reporting only canonical cis Watson&ndash;Crick base pairs
+                (A-U, G-C and G-U).
+            </li>
+            <li>
+                <strong>Extended BPSEQ:</strong>
+                an extended format in which the third column corresponds to canonical
+                cis Watson&ndash;Crick pairs, while the remaining columns encode the other
+                Leontis&ndash;Westhof base-pair types.
+            </li>
+        </ul>
+    </li>
+
+    <li>
+        <strong>Run:</strong>
+        after selecting the tool, analysis level and output format, click <strong>RUN</strong>
+        to execute the analysis.
+    </li>
+</ol>
+
+<h2>Extended BPSEQ format</h2>
+<p>The Extended BPSEQ format includes the following columns:</p>
+
+<table border="1" cellspacing="0" cellpadding="4">
+    <tr>
+        <th>id</th>
+        <th>nt</th>
+        <th>cWW</th>
+        <th>tWW</th>
+        <th>cWH</th>
+        <th>tWH</th>
+        <th>cWS</th>
+        <th>tWS</th>
+        <th>cHH</th>
+        <th>tHH</th>
+        <th>cHS</th>
+        <th>tHS</th>
+        <th>cSS</th>
+        <th>tSS</th>
+    </tr>
+</table>
+
+<h2>The role of Docker</h2>
+<p>
+    EXTRARNAS uses Docker containers to run its underlying analysis tools in isolated and
+    reproducible environments.
+</p>
+
+<p>
+    The standard analysis environment is provided by the <code>extrarnas-core</code> image,
+    tagged with the EXTRARNAS release. Optional tools with separate licensing requirements,
+    such as X3DNA-DSSR, use dedicated images.
+</p>
+
+<p>Using Docker means that:</p>
+<ul>
+    <li>
+        you do not need to manually install complex third-party tools, compilers or specific
+        language versions on your system;
+    </li>
+    <li>
+        executions are isolated and reproducible;
+    </li>
+    <li>
+        Docker Desktop must be installed and running before starting the analysis.
+    </li>
+</ul>
+
+<h2>Troubleshooting</h2>
+
+<h3>JavaFX startup problem</h3>
+<p>
+    EXTRARNAS requires Java 21 or higher. If the application does not start because of a JavaFX
+    error, install JavaFX 21 and launch the application specifying the JavaFX modules.
+</p>
+
+<h3>Molecules loading error</h3>
+<p>
+    If an error occurs while loading the CSV file, EXTRARNAS can be started with the following
+    JVM option:
+</p>
+
+<pre>-Dcom.sun.xml.bind.v2.bytecode.ClassTailor.noOptimize=true</pre>
+
+<h3>Current limitations</h3>
+<p>
+    mmCIF-to-PDB conversion for bundled PDB entries may fail in a small number of cases because
+    of placeholder crystallographic records produced by BeEM.
+</p>
+
+</body>
+</html>
