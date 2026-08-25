@@ -9,6 +9,7 @@ import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -68,7 +69,9 @@ final class BeemMappingParser {
             throw new IOException("BeEM mapping contains no bundle chain mappings: " + inputPath);
         }
 
-        return new ConversionResult(Set.copyOf(bundlePaths), mappingCount);
+        return new ConversionResult(
+                Collections.unmodifiableSet(new LinkedHashSet<>(bundlePaths)),
+                mappingCount);
     }
 
     static List<Entry> readCsv(Path mappingPath) throws IOException {

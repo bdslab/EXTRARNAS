@@ -8,12 +8,18 @@ public class StructureInfo {
     public String chain;
     public String location;
     public StructureStatus status;
+    public String error;
 
     public StructureInfo(String name, String chain, String location, StructureStatus status) {
+        this(name, chain, location, status, "");
+    }
+
+    public StructureInfo(String name, String chain, String location, StructureStatus status, String error) {
         this.name = name;
         this.chain = chain;
         this.location = location;
         this.status = status;
+        this.error = error == null ? "" : error;
     }
 
     public StructureInfo(String name, String chain, String location) {
@@ -38,5 +44,13 @@ public class StructureInfo {
 
     public void setStatus(StructureStatus status) {
         this.status = status;
+    }
+
+    public String getError() {
+        return error;
+    }
+
+    public void setError(String error) {
+        this.error = error == null ? "" : error;
     }
 }

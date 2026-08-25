@@ -1,13 +1,17 @@
 package it.unicam.cs.bdslab.extrarnas.view;
 
 import it.unicam.cs.bdslab.extrarnas.controller.DockerController;
+import it.unicam.cs.bdslab.extrarnas.controller.CsvPreprocessingListener;
 import it.unicam.cs.bdslab.extrarnas.controller.ExtendedBPSEQExportController;
 import it.unicam.cs.bdslab.extrarnas.controller.IOController;
+import it.unicam.cs.bdslab.extrarnas.models.CsvPreprocessingResult;
+import it.unicam.cs.bdslab.extrarnas.models.CsvRowResult;
 import it.unicam.cs.bdslab.extrarnas.models.StructureInfo;
 import it.unicam.cs.bdslab.extrarnas.models.StructureStatus;
 import it.unicam.cs.bdslab.extrarnas.parser.output.RNASecondaryStructurePrinter;
 import it.unicam.cs.bdslab.extrarnas.view.utils.TOOL;
 import javafx.beans.property.*;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
@@ -34,6 +38,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -86,6 +91,15 @@ public class HomeController {
     private Label label_folder;
 
     @FXML
+    private VBox preprocessingPanel;
+
+    @FXML
+    private Label preprocessingStatusLabel;
+
+    @FXML
+    private ProgressBar preprocessingProgressBar;
+
+    @FXML
     private CheckBox ck_extractSS;
 
     @FXML
@@ -103,6 +117,7 @@ public class HomeController {
     private Map<TOOL, BooleanProperty> checkedItems = new HashMap<>();
 
     private final ObservableList<StructureInfo> structures = FXCollections.observableArrayList();
+    private boolean preprocessingActive;
 
     @FXML
     public void initialize() {
@@ -128,7 +143,7 @@ public class HomeController {
 
         toolListView.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             boolean anySelected = checkedItems.values().stream().anyMatch(BooleanProperty::get);
-            btn_run.setDisable(!anySelected);
+            btn_run.setDisable(preprocessingActive || !anySelected);
         });
 
         this.filesTable.setItems(this.structures);
@@ -138,6 +153,9 @@ public class HomeController {
         chainColumn.setCellValueFactory(x -> new ReadOnlyStringWrapper(x.getValue().getChain()));
 
         statusColumn.setCellValueFactory(x -> new ReadOnlyStringWrapper(x.getValue().getStatus().translate()));
+        errorColumn.setCellValueFactory(x -> new ReadOnlyStringWrapper(x.getValue().getError()));
+
+        loadExistingPreprocessedStructures();
 
         deleteColumn.setCellFactory(col -> new TableCell<StructureInfo, Void>() {
             private final Button btn = new Button();
@@ -154,7 +172,7 @@ public class HomeController {
                 btn.setContentDisplay(ContentDisplay.LEFT);
                 btn.setOnAction(e -> {
                     StructureInfo item = getTableView().getItems().get(getIndex());
-                    filesTable.getItems().remove(item);
+                    deleteStructure(item);
                 });
             }
 
@@ -164,6 +182,12 @@ public class HomeController {
                 if (empty) {
                     setGraphic(null);
                 } else {
+                    int rowIndex = getIndex();
+                    boolean processing = rowIndex >= 0
+                            && rowIndex < getTableView().getItems().size()
+                            && (getTableView().getItems().get(rowIndex).getStatus() == StructureStatus.PROCESSING
+                            || getTableView().getItems().get(rowIndex).getStatus() == StructureStatus.QUEUED);
+                    btn.setDisable(processing);
                     setGraphic(btn);
                 }
             }
@@ -191,9 +215,219 @@ public class HomeController {
         logger.info("Initialization done");
     }
 
+    private void loadExistingPreprocessedStructures() {
+        Path sharedDirectory = ioController.getSharedDirectory();
+        if (sharedDirectory == null) {
+            return;
+        }
+
+        try {
+            List<StructureInfo> existingStructures =
+                    dockerController.listPreprocessedStructures(sharedDirectory);
+            structures.setAll(existingStructures);
+            logger.info("Loaded " + existingStructures.size()
+                    + " existing structures from the preprocessed workspace " + sharedDirectory);
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to load existing preprocessed structures from "
+                    + sharedDirectory, e);
+        }
+    }
+
+    private void markStructuresAsQueued(List<StructureInfo> requestedStructures, Path csvPath) {
+        for (StructureInfo requested : requestedStructures) {
+            for (String chain : expandChainFilter(requested.getChain())) {
+                upsertStructure(new StructureInfo(
+                        requested.getName(),
+                        chain,
+                        csvPath.toString(),
+                        StructureStatus.QUEUED));
+            }
+        }
+        sortStructures();
+        filesTable.refresh();
+    }
+
+    private void markRowAsProcessing(String pdbId, String chainFilter, Path csvPath) {
+        for (String chain : expandChainFilter(chainFilter)) {
+            upsertStructure(new StructureInfo(
+                    pdbId,
+                    chain,
+                    csvPath.toString(),
+                    StructureStatus.PROCESSING));
+        }
+        sortStructures();
+        filesTable.refresh();
+    }
+
+    private void applyRowCompletion(CsvRowResult rowResult, List<StructureInfo> workspaceStructures,
+                                    Path csvPath) {
+        Set<String> rowKeys = expandChainFilter(rowResult.chainFilter()).stream()
+                .map(chain -> structureKey(rowResult.pdbId(), chain))
+                .collect(Collectors.toSet());
+        structures.removeIf(structure -> rowKeys.contains(structureKey(structure.getName(), structure.getChain()))
+                && (structure.getStatus() == StructureStatus.QUEUED
+                || structure.getStatus() == StructureStatus.PROCESSING));
+
+        for (StructureInfo workspaceStructure : workspaceStructures) {
+            upsertStructure(workspaceStructure);
+        }
+
+        if (!rowResult.successful()) {
+            for (String chain : expandChainFilter(rowResult.chainFilter())) {
+                upsertStructure(new StructureInfo(
+                        rowResult.pdbId(),
+                        chain,
+                        csvPath.toString(),
+                        StructureStatus.ERROR,
+                        rowResult.error()));
+            }
+        }
+
+        sortStructures();
+        filesTable.refresh();
+    }
+
+    private void setPreprocessingActive(boolean active) {
+        preprocessingActive = active;
+        preprocessingPanel.setManaged(active);
+        preprocessingPanel.setVisible(active);
+        btn_addCsv.setDisable(active);
+        if (active) {
+            btn_run.setDisable(true);
+        } else {
+            boolean anyToolSelected = checkedItems.values().stream().anyMatch(BooleanProperty::get);
+            btn_run.setDisable(!anyToolSelected);
+        }
+    }
+
+    private void markStructuresAsFailed(List<StructureInfo> requestedStructures, Path csvPath, String error) {
+        for (StructureInfo requested : requestedStructures) {
+            for (String chain : expandChainFilter(requested.getChain())) {
+                StructureInfo current = findStructure(requested.getName(), chain);
+                if (current != null
+                        && current.getStatus() != StructureStatus.QUEUED
+                        && current.getStatus() != StructureStatus.PROCESSING) {
+                    continue;
+                }
+                upsertStructure(new StructureInfo(
+                        requested.getName(),
+                        chain,
+                        csvPath.toString(),
+                        StructureStatus.ERROR,
+                        error));
+            }
+        }
+        sortStructures();
+        filesTable.refresh();
+    }
+
+    private void applyPreprocessingResult(CsvPreprocessingResult result) {
+        Map<String, StructureInfo> merged = new LinkedHashMap<>();
+        for (StructureInfo structure : result.workspaceStructures()) {
+            merged.put(structureKey(structure.getName(), structure.getChain()), structure);
+        }
+
+        long failedRows = 0;
+        for (CsvRowResult rowResult : result.rowResults()) {
+            if (rowResult.successful()) {
+                continue;
+            }
+            failedRows++;
+            for (String chain : expandChainFilter(rowResult.chainFilter())) {
+                StructureInfo failedStructure = new StructureInfo(
+                        rowResult.pdbId(),
+                        chain,
+                        ioController.getSharedDirectory().resolve("preprocessed").toString(),
+                        StructureStatus.ERROR,
+                        rowResult.error());
+                merged.put(structureKey(rowResult.pdbId(), chain), failedStructure);
+            }
+        }
+
+        structures.setAll(merged.values());
+        sortStructures();
+        filesTable.refresh();
+        logger.info("Workspace refresh completed: " + result.workspaceStructures().size()
+                + " preprocessed structures available, " + failedRows + " CSV rows failed");
+    }
+
+    private void upsertStructure(StructureInfo updated) {
+        String key = structureKey(updated.getName(), updated.getChain());
+        for (int index = 0; index < structures.size(); index++) {
+            StructureInfo current = structures.get(index);
+            if (structureKey(current.getName(), current.getChain()).equals(key)) {
+                structures.set(index, updated);
+                return;
+            }
+        }
+        structures.add(updated);
+    }
+
+    private StructureInfo findStructure(String pdbId, String chain) {
+        String key = structureKey(pdbId, chain);
+        return structures.stream()
+                .filter(structure -> structureKey(structure.getName(), structure.getChain()).equals(key))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private List<String> expandChainFilter(String chainFilter) {
+        if (chainFilter == null || chainFilter.isBlank() || chainFilter.equals("*")) {
+            return List.of(chainFilter == null || chainFilter.isBlank() ? "*" : chainFilter);
+        }
+        return Arrays.stream(chainFilter.split(";"))
+                .map(String::trim)
+                .filter(chain -> !chain.isEmpty())
+                .distinct()
+                .toList();
+    }
+
+    private String structureKey(String pdbId, String chain) {
+        return pdbId.toUpperCase(Locale.ROOT) + "|" + chain;
+    }
+
+    private void sortStructures() {
+        structures.sort(Comparator.comparing(StructureInfo::getName, String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(StructureInfo::getChain));
+    }
+
+    private void deleteStructure(StructureInfo structure) {
+        if (structure.getStatus() == StructureStatus.PROCESSING
+                || structure.getStatus() == StructureStatus.QUEUED) {
+            showAlert(Alert.AlertType.WARNING, "Structure is processing", "",
+                    "Wait for preprocessing to finish before deleting this structure.");
+            return;
+        }
+
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmation.initOwner(getPrimaryStage());
+        confirmation.setTitle("Delete preprocessed structure");
+        confirmation.setHeaderText(null);
+        confirmation.setContentText("Delete " + structure.getName() + " chain "
+                + structure.getChain() + " from the workspace?");
+        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+            return;
+        }
+
+        try {
+            dockerController.deletePreprocessedStructure(ioController.getSharedDirectory(), structure);
+            structures.remove(structure);
+            logger.info("Removed structure " + structure.getName() + " chain "
+                    + structure.getChain() + " from the table and workspace");
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to delete preprocessed structure "
+                    + structure.getName() + " chain " + structure.getChain(), e);
+            showAlert(Alert.AlertType.ERROR, "Delete error", "", e.getMessage());
+        }
+    }
+
     private void handleExtractSelected(CheckBox ckExtractX) {
         ckExtractX.setOnAction((actionEvent) -> {
             actionEvent.consume();
+            if (preprocessingActive) {
+                btn_run.setDisable(true);
+                return;
+            }
             boolean selected = ckExtractX.isSelected();
             boolean noToolSelected = checkedItems.values().stream().noneMatch(BooleanProperty::get);
             if (selected && !noToolSelected) {
@@ -239,52 +473,73 @@ public class HomeController {
 
         try {
             Path csvPath = selectedCsv.toPath();
-            Path sharedDirectory = csvPath.getParent();
-
-            if (!sharedDirectory.equals(ioController.getSharedDirectory())) {
-                showAlert(Alert.AlertType.WARNING, "Wrong CSV Folder", "",
-                        "Select a CSV inside the configured shared folder: " + ioController.getSharedDirectory());
+            Path sharedDirectory = ioController.getSharedDirectory();
+            List<StructureInfo> requestedStructures = ioController.loadMoleculesFromCsv(csvPath);
+            if (requestedStructures.isEmpty()) {
+                showAlert(Alert.AlertType.WARNING, "Empty CSV", "",
+                        "The selected CSV does not contain any valid molecule rows.");
                 return;
             }
+
+            markStructuresAsQueued(requestedStructures, csvPath);
+            logger.info("Selected CSV " + csvPath + " for workspace " + sharedDirectory
+                    + "; queued " + requestedStructures.size() + " molecule rows");
 
             String folderText = "Folder: " + sharedDirectory;
             label_folder.setText(folderText);
             label_folder.setTooltip(new Tooltip(folderText));
 
-            Alert loadingAlert = new Alert(Alert.AlertType.INFORMATION);
-            loadingAlert.setTitle("Processing CSV");
-            loadingAlert.setHeaderText(null);
+            preprocessingStatusLabel.setText("Preparing CSV preprocessing...");
+            preprocessingProgressBar.setProgress(0);
+            setPreprocessingActive(true);
 
-            ProgressBar bar = new ProgressBar();
-            bar.setPrefWidth(380);
-            VBox box = new VBox(10, new Label("Loading molecules from CSV..."), bar);
-            loadingAlert.getDialogPane().setContent(box);
-            loadingAlert.getDialogPane().getButtonTypes().clear();
-
-            Task<List<StructureInfo>> preprocessTask = new Task<>() {
+            Task<CsvPreprocessingResult> preprocessTask = new Task<>() {
                 @Override
-                protected List<StructureInfo> call() throws Exception {
-                    return dockerController.preprocessCsvAndCollectStructures(sharedDirectory, csvPath);
+                protected CsvPreprocessingResult call() throws Exception {
+                    CsvPreprocessingListener listener = new CsvPreprocessingListener() {
+                        @Override
+                        public void onRowStarted(String pdbId, String chainFilter,
+                                                 int rowNumber, int totalRows) {
+                            Platform.runLater(() -> {
+                                markRowAsProcessing(pdbId, chainFilter, csvPath);
+                                preprocessingStatusLabel.setText("Preprocessing " + rowNumber + " of "
+                                        + totalRows + ": " + pdbId + ", auth chain " + chainFilter);
+                                preprocessingProgressBar.setProgress((double) (rowNumber - 1) / totalRows);
+                            });
+                        }
+
+                        @Override
+                        public void onRowCompleted(CsvRowResult result, int completedRows, int totalRows,
+                                                   List<StructureInfo> workspaceStructures) {
+                            Platform.runLater(() -> {
+                                applyRowCompletion(result, workspaceStructures, csvPath);
+                                preprocessingProgressBar.setProgress((double) completedRows / totalRows);
+                                preprocessingStatusLabel.setText("Preprocessed " + completedRows + " of "
+                                        + totalRows + ": " + result.pdbId() + ", auth chain "
+                                        + result.chainFilter() + " — "
+                                        + (result.successful() ? "loaded" : "error"));
+                            });
+                        }
+                    };
+                    return dockerController.preprocessCsvAndCollectStructures(
+                            sharedDirectory, csvPath, listener);
                 }
             };
 
             preprocessTask.setOnSucceeded(ev -> {
-                loadingAlert.setResult(ButtonType.OK);
-                loadingAlert.close();
-                List<StructureInfo> generatedStructures = preprocessTask.getValue();
-                structures.setAll(generatedStructures);
-                logger.info("Loaded " + generatedStructures.size() + " molecules from preprocessed output");
+                applyPreprocessingResult(preprocessTask.getValue());
+                setPreprocessingActive(false);
             });
 
             preprocessTask.setOnFailed(ev -> {
-                loadingAlert.setResult(ButtonType.OK);
-                loadingAlert.close();
+                String error = Optional.ofNullable(preprocessTask.getException())
+                        .map(Throwable::getMessage)
+                        .orElse("Unknown preprocessing error");
+                markStructuresAsFailed(requestedStructures, csvPath, error);
+                setPreprocessingActive(false);
                 showAlert(Alert.AlertType.ERROR, "CSV preprocessing error", "",
-                        Optional.ofNullable(preprocessTask.getException())
-                                .map(Throwable::getMessage)
-                                .orElse("Unknown preprocessing error"));
+                        error);
             });
-            loadingAlert.show();
 
             new Thread(preprocessTask, "csv-preprocess").start();
         } catch (Exception e) {
@@ -420,6 +675,8 @@ public class HomeController {
 
         task.setOnSucceeded(e -> {
             this.filesTable.getItems()
+                            .stream()
+                            .filter(s -> s.getStatus() != StructureStatus.ERROR)
                             .forEach(s -> s.setStatus(StructureStatus.PROCESSED));
             this.filesTable.refresh();
             loadingAlert.setResult(ButtonType.OK);

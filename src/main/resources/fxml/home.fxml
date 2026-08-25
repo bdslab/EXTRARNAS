@@ -33,17 +33,32 @@
          <bottom>
             <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
                <bottom>
-                      <TableView fx:id="filesTable" maxWidth="1172.0" minWidth="1100.0" prefHeight="266.0" prefWidth="1172.0" styleClass="table" BorderPane.alignment="CENTER">
+                  <VBox alignment="CENTER" spacing="8.0" BorderPane.alignment="CENTER">
+                     <children>
+                        <VBox fx:id="preprocessingPanel" managed="false" maxWidth="1172.0" prefWidth="1172.0" spacing="6.0" visible="false">
+                           <children>
+                              <Label fx:id="preprocessingStatusLabel" text="Preparing CSV preprocessing...">
+                                 <font>
+                                    <Font name="System Bold" size="13.0" />
+                                 </font>
+                              </Label>
+                              <ProgressBar fx:id="preprocessingProgressBar" maxWidth="1.7976931348623157E308" prefWidth="1172.0" progress="0.0" />
+                           </children>
+                        </VBox>
+                      <TableView fx:id="filesTable" maxWidth="1172.0" minWidth="1100.0" prefHeight="266.0" prefWidth="1172.0" styleClass="table">
                           <columns>
-                              <TableColumn fx:id="nameColumn" maxWidth="275.0" minWidth="275.0" prefWidth="275.0" resizable="false" styleClass="column" text="Name" />
-                              <TableColumn fx:id="chainColumn" maxWidth="275.0" minWidth="275.0" prefWidth="275.0" resizable="false" styleClass="column" text="Chain" />
-                              <TableColumn fx:id="statusColumn" maxWidth="275.0" minWidth="275.0" prefWidth="275.0" resizable="false" styleClass="column" text="Status" />
-                              <TableColumn fx:id="deleteColumn" maxWidth="346.0" minWidth="275.0" prefWidth="346.0" resizable="false" styleClass="column" text="Actions" />
+                              <TableColumn fx:id="nameColumn" maxWidth="190.0" minWidth="190.0" prefWidth="190.0" resizable="false" styleClass="column" text="Name" />
+                              <TableColumn fx:id="chainColumn" maxWidth="160.0" minWidth="160.0" prefWidth="160.0" resizable="false" styleClass="column" text="Chain" />
+                              <TableColumn fx:id="statusColumn" maxWidth="130.0" minWidth="130.0" prefWidth="130.0" resizable="false" styleClass="column" text="Status" />
+                              <TableColumn fx:id="errorColumn" maxWidth="450.0" minWidth="450.0" prefWidth="450.0" resizable="false" styleClass="column" text="Error" />
+                              <TableColumn fx:id="deleteColumn" maxWidth="240.0" minWidth="240.0" prefWidth="240.0" resizable="false" styleClass="column" text="Actions" />
                           </columns>
-                          <BorderPane.margin>
-                              <Insets left="50.0" right="50.0" top="10.0" />
-                          </BorderPane.margin>
                       </TableView>
+                     </children>
+                     <BorderPane.margin>
+                        <Insets left="50.0" right="50.0" top="10.0" />
+                     </BorderPane.margin>
+                  </VBox>
                </bottom>
                <right>
                   <ImageView fitHeight="87.0" fitWidth="98.0" pickOnBounds="true" preserveRatio="true" BorderPane.alignment="CENTER">

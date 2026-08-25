@@ -11,7 +11,8 @@ import com.github.dockerjava.core.command.ExecStartResultCallback;
 import com.github.dockerjava.transport.DockerHttpClient;
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
 import it.unicam.cs.bdslab.extrarnas.models.StructureInfo;
-import it.unicam.cs.bdslab.extrarnas.models.StructureStatus;
+import it.unicam.cs.bdslab.extrarnas.models.CsvPreprocessingResult;
+import it.unicam.cs.bdslab.extrarnas.models.CsvRowResult;
 import org.biojava.nbio.structure.Structure;
 
 import java.io.*;
@@ -105,16 +106,6 @@ public class DockerController {
         // bundles folder
         makeDirInContainer(container.getId(), bundlesPath);
 
-        // NOW IS HANDLED BY HOME CONTROLLER
-        // --- process exactly ONE CSV in sharedFolder ---
-        // Path csv = pickSingleCsv();
-        // if (csv == null) {
-        //     logger.info("No CSV file found in " + sharedFolder + " — nothing to process.");
-        //     return 0;
-        // }
-        // logger.info("Using CSV: " + csv.getFileName());
-
-        // processCsvAndFilterPdbs(csv);
         return 1;
     }
 
@@ -134,87 +125,68 @@ public class DockerController {
     }
 
     /**
-     * Pick exactly one CSV in the folder:
-     * - If none: return null.
-     * - If multiple: pick the first after sorting by filename, and log a warning.
-     */
-    private Path pickSingleCsv() throws IOException {
-        List<Path> csvs = new ArrayList<>();
-        try (DirectoryStream<Path> ds = Files.newDirectoryStream(sharedFolder, "*.csv")) {
-            for (Path p : ds) csvs.add(p);
-        }
-        if (csvs.isEmpty()) return null;
-
-        csvs.sort(Comparator.comparing(p -> p.getFileName().toString()));
-        if (csvs.size() > 1)
-            logger.severe("Multiple CSV files found in " + sharedFolder + " — using the first: " + csvs.get(0).getFileName());
-        return csvs.get(0);
-    }
-
-    /**
      * Reads the single CSV and processes potentially many PDB rows.
      * CSV: col0 = PDB ID, col1 = auth chain filter (e.g., "A;B").
      * Output: one PDB and one mmCIF file per retained auth chain under /data/preprocessed.
      */
-    private void processCsvAndFilterPdbs(Path csvFile) throws IOException {
+    private List<CsvRowResult> processCsvAndFilterPdbs(Path csvFile,
+                                                       CsvPreprocessingListener listener) throws IOException {
         var preprocessedFolder = sharedFolder.resolve("preprocessed");
+        prepareBeemWorkingDirectories();
         int ok = 0;
         List<String> failed = new ArrayList<>();
-        try (BufferedReader br = Files.newBufferedReader(csvFile, StandardCharsets.UTF_8)) {
-            String line;
-            boolean headerSkipped = false;
+        List<CsvRowResult> rowResults = new ArrayList<>();
+        List<CsvInputRow> inputRows = readCsvRows(csvFile);
+        int totalRows = inputRows.size();
 
-            while ((line = br.readLine()) != null) {
-                if (line.isBlank()) continue;
+        for (int rowIndex = 0; rowIndex < totalRows; rowIndex++) {
+            CsvInputRow inputRow = inputRows.get(rowIndex);
+            String pdbID = inputRow.pdbId();
+            String chain = inputRow.chainFilter();
+            listener.onRowStarted(pdbID, chain, rowIndex + 1, totalRows);
+            logger.info("Processing structure " + pdbID + " with requested auth chain filter: " + chain);
 
-                if (!headerSkipped && looksLikeHeader(line)) {
-                    headerSkipped = true;
-                    continue;
-                }
+            // Host path for reading (bind of /data)
+            Path fileToFilter = sharedFolder.resolve(pdbID + ".pdb");
+            var isPDB = true;
 
-                String[] cols = parseRow(line);
-                if (cols.length < 2) {
-                    logger.severe("Skipping CSV row because it has fewer than two columns: " + line);
-                    continue;
-                }
-
-                String pdbID = cols[0].trim();   // PDB accession code
-                String chain = cols[1].trim();   // auth chain IDs, e.g. "A;B"
-                logger.info("Processing structure " + pdbID + " with requested auth chain filter: " + chain);
-
-                // Host path for reading (bind of /data)
-                Path fileToFilter = sharedFolder.resolve(pdbID + ".pdb");
-                var isPDB = true;
-
-                if (!Files.exists(fileToFilter)) {
-                    logger.info("No local PDB file found for " + pdbID + "; downloading the structure with BioJava");
-                    try {
-                        fileToFilter = bioJavaController.downloadPDB(pdbID, String.valueOf(sharedFolder));
-                        if (fileToFilter.toString().endsWith("cif")) {
-                            logger.info("Structure " + pdbID + " requires mmCIF preprocessing; starting BeEM conversion");
-                            isPDB = false;
-                            this.beem(pdbID + ".cif");
-                            this.moveFiles(pdbID);
-                        }
-                    } catch (Exception e) {
-                        logger.log(Level.SEVERE, "Download or BeEM conversion failed for " + pdbID
-                                + " (auth chain filter " + chain + ")", e);
-                        failed.add(pdbID + "," + chain + " -> download/beem: " + e.getMessage());
-                        continue;
-                    }
-                }
-                // preprocessing
+            if (!Files.exists(fileToFilter)) {
+                logger.info("No local PDB file found for " + pdbID + "; downloading the structure with BioJava");
                 try {
-                    if (isPDB) {
-                        filterPDB(chain, pdbID, preprocessedFolder, fileToFilter);
-                    } else {
-                        filterCIF(chain, pdbID, preprocessedFolder);
+                    fileToFilter = bioJavaController.downloadPDB(pdbID, String.valueOf(sharedFolder));
+                    if (fileToFilter.toString().endsWith("cif")) {
+                        logger.info("Structure " + pdbID + " requires mmCIF preprocessing; starting BeEM conversion");
+                        isPDB = false;
+                        this.beem(pdbID + ".cif");
+                        this.moveFiles(pdbID);
                     }
-                    ok++;
                 } catch (Exception e) {
-                    logger.log(Level.SEVERE, "Failed processing CSV row '" + line + "'", e);
-                    failed.add(pdbID + "," + chain + " -> " + e.getMessage());
+                    logger.log(Level.SEVERE, "Download or BeEM conversion failed for " + pdbID
+                            + " (auth chain filter " + chain + ")", e);
+                    failed.add(pdbID + "," + chain + " -> download/beem: " + e.getMessage());
+                    CsvRowResult result = CsvRowResult.failure(pdbID, chain, e.getMessage());
+                    rowResults.add(result);
+                    notifyRowCompleted(listener, result, rowIndex + 1, totalRows);
+                    continue;
                 }
+            }
+            // preprocessing
+            try {
+                if (isPDB) {
+                    filterPDB(chain, pdbID, preprocessedFolder, fileToFilter);
+                } else {
+                    filterCIF(chain, pdbID, preprocessedFolder);
+                }
+                ok++;
+                CsvRowResult result = CsvRowResult.success(pdbID, chain);
+                rowResults.add(result);
+                notifyRowCompleted(listener, result, rowIndex + 1, totalRows);
+            } catch (Exception e) {
+                logger.log(Level.SEVERE, "Failed processing CSV row '" + inputRow.sourceLine() + "'", e);
+                failed.add(pdbID + "," + chain + " -> " + e.getMessage());
+                CsvRowResult result = CsvRowResult.failure(pdbID, chain, e.getMessage());
+                rowResults.add(result);
+                notifyRowCompleted(listener, result, rowIndex + 1, totalRows);
             }
         }
 
@@ -227,6 +199,46 @@ public class DockerController {
             logger.severe("Structures that could not be loaded:");
             for (String f : failed) logger.severe("  " + f);
         }
+        return List.copyOf(rowResults);
+    }
+
+    private List<CsvInputRow> readCsvRows(Path csvFile) throws IOException {
+        List<CsvInputRow> rows = new ArrayList<>();
+        try (BufferedReader br = Files.newBufferedReader(csvFile, StandardCharsets.UTF_8)) {
+            String line;
+            boolean headerSkipped = false;
+            while ((line = br.readLine()) != null) {
+                if (line.isBlank()) continue;
+                if (!headerSkipped && looksLikeHeader(line)) {
+                    headerSkipped = true;
+                    continue;
+                }
+
+                String[] cols = parseRow(line);
+                if (cols.length < 2 || cols[0].isBlank() || cols[1].isBlank()) {
+                    logger.severe("Skipping invalid CSV row: " + line);
+                    continue;
+                }
+                rows.add(new CsvInputRow(cols[0].trim(), cols[1].trim(), line));
+            }
+        }
+        return rows;
+    }
+
+    private void notifyRowCompleted(CsvPreprocessingListener listener, CsvRowResult result,
+                                    int completedRows, int totalRows) {
+        List<StructureInfo> workspaceStructures;
+        try {
+            workspaceStructures = listPreprocessedStructures(sharedFolder);
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "Could not refresh the preprocessed workspace after "
+                    + result.pdbId() + " auth chain filter " + result.chainFilter(), e);
+            workspaceStructures = List.of();
+        }
+        listener.onRowCompleted(result, completedRows, totalRows, workspaceStructures);
+    }
+
+    private record CsvInputRow(String pdbId, String chainFilter, String sourceLine) {
     }
 
     private static String[] parseRow(String line) {
@@ -239,42 +251,37 @@ public class DockerController {
         return lower.contains("id") || lower.contains("chain");
     }
 
-    public List<StructureInfo> preprocessCsvAndCollectStructures(Path sharedFolder, Path csvFile) throws IOException {
+    public CsvPreprocessingResult preprocessCsvAndCollectStructures(Path sharedFolder, Path csvFile) throws IOException {
+        return preprocessCsvAndCollectStructures(sharedFolder, csvFile, CsvPreprocessingListener.NONE);
+    }
+
+    public CsvPreprocessingResult preprocessCsvAndCollectStructures(Path sharedFolder, Path csvFile,
+                                                                    CsvPreprocessingListener listener) throws IOException {
         Objects.requireNonNull(sharedFolder, "sharedFolder");
         Objects.requireNonNull(csvFile, "csvFile");
+        Objects.requireNonNull(listener, "listener");
 
         if (!Files.isRegularFile(csvFile)) {
             throw new IOException("CSV file not found: " + csvFile);
         }
 
         this.sharedFolder = sharedFolder;
-        processCsvAndFilterPdbs(csvFile);
-        return collectStructuresFromPreprocessed(sharedFolder.resolve("preprocessed"));
+        List<CsvRowResult> rowResults = processCsvAndFilterPdbs(csvFile, listener);
+        List<StructureInfo> workspaceStructures = listPreprocessedStructures(sharedFolder);
+        return new CsvPreprocessingResult(workspaceStructures, rowResults);
     }
 
-    private List<StructureInfo> collectStructuresFromPreprocessed(Path preprocessedFolder) throws IOException {
-        if (!Files.isDirectory(preprocessedFolder)) {
-            return List.of();
-        }
+    public List<StructureInfo> listPreprocessedStructures(Path sharedFolder) throws IOException {
+        Objects.requireNonNull(sharedFolder, "sharedFolder");
+        return PreprocessedStructureStore.list(sharedFolder.resolve("preprocessed"));
+    }
 
-        List<StructureInfo> result = new ArrayList<>();
-        try (DirectoryStream<Path> ds = Files.newDirectoryStream(preprocessedFolder, "*.pdb")) {
-            for (Path p : ds) {
-                String fileName = p.getFileName().toString();
-                String baseName = fileName.substring(0, fileName.length() - 4);
-                String[] parts = baseName.split("_");
-
-                String moleculeId = parts.length > 0 ? parts[0] : baseName;
-                String chain = parts.length > 1
-                        ? String.join("_", Arrays.copyOfRange(parts, 1, parts.length))
-                        : "";
-
-                result.add(new StructureInfo(moleculeId, chain, preprocessedFolder.toString(), StructureStatus.LOADED));
-            }
-        }
-
-        result.sort(Comparator.comparing(StructureInfo::getName).thenComparing(StructureInfo::getChain));
-        return result;
+    public void deletePreprocessedStructure(Path sharedFolder, StructureInfo structure) throws IOException {
+        Objects.requireNonNull(sharedFolder, "sharedFolder");
+        Objects.requireNonNull(structure, "structure");
+        PreprocessedStructureStore.delete(sharedFolder.resolve("preprocessed"), structure);
+        logger.info("Deleted preprocessed PDB and mmCIF files for "
+                + structure.getName() + " auth chain " + structure.getChain());
     }
 
     /**
@@ -463,6 +470,9 @@ public class DockerController {
      * @param pdbID
      */
     private void moveFiles(String pdbID) throws Exception {
+        // Each CSV import may remove these temporary directories when it completes.
+        // Recreate them defensively before moving the output of a new BeEM conversion.
+        prepareBeemWorkingDirectories();
         var originalMappingPath = findMappingFile(pdbID);
         if (originalMappingPath == null) {
             throw new FileNotFoundException(
@@ -489,6 +499,15 @@ public class DockerController {
         Files.delete(originalMappingPath);
         logger.info("Stored converted BeEM mapping for " + pdbID + ": " + targetMapping);
         logger.info("Removed original BeEM text mapping after successful conversion: " + originalMappingPath);
+    }
+
+    private void prepareBeemWorkingDirectories() throws IOException {
+        Path bundlesDirectory = sharedFolder.resolve("bundles");
+        Path mappingsDirectory = sharedFolder.resolve("mappings");
+        Files.createDirectories(bundlesDirectory);
+        Files.createDirectories(mappingsDirectory);
+        logger.info("BeEM working directories are ready: bundles=" + bundlesDirectory
+                + ", mappings=" + mappingsDirectory);
     }
 
     public static DockerController getInstance() {

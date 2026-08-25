@@ -14,7 +14,7 @@ When running the application, you will be guided through a configuration process
 
 1. **Shared Volume / Workspace Setup:** The software will ask you to specify a local directory to be shared with the Docker container. This is necessary to pass input data to the extraction tools and to securely retrieve their outputs.
 
-2. **Add CSV molecules list:** Use this button to select a CSV file from your system and load the molecules to be processed. The file must contain two columns: `id` and `chain`, where `id` is the PDB code (4 letters or digits) and `chain` is the author/PDB chain identifier (`_atom_site.auth_asym_id`). Do not use the mmCIF `_atom_site.label_asym_id`. Chain IDs are case-sensitive; use semicolons to request multiple chains or `*` to process all RNA chains in the structure. Example:
+2. **Add CSV molecules list:** Use this button to select a CSV file from any accessible folder and add its molecules to the persistent shared workspace. Structures already present in the workspace's `preprocessed` folder are restored when EXTRARNAS starts. The file must contain two columns: `id` and `chain`, where `id` is the PDB code (4 letters or digits) and `chain` is the author/PDB chain identifier (`_atom_site.auth_asym_id`). Do not use the mmCIF `_atom_site.label_asym_id`. Chain IDs are case-sensitive; use semicolons to request multiple chains or `*` to process all RNA chains in the structure. Example:
 
 | id   | chain |
 |------|-------|
@@ -24,6 +24,8 @@ When running the application, you will be guided through a configuration process
 | 2KOC | *     |
 
 *Note: `*` means that all chains in the structure will be processed.*
+
+The CSV file itself does not need to be inside the shared workspace because it is read by the EXTRARNAS host application. Any local PDB files referenced by their IDs must still be placed in the shared workspace so that Docker-based tools can access them. Deleting a structure from the table also removes its generated PDB and mmCIF files from `preprocessed`.
 
 3. **Tool Selection:** Choose which extraction tool you want to run.
 

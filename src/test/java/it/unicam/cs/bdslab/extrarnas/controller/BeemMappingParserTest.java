@@ -39,6 +39,10 @@ class BeemMappingParserTest {
         assertEquals(3, result.mappingCount());
         assertEquals(2, result.bundlePaths().size());
         assertEquals(List.of(
+                tempDir.resolve("4v5k-pdb-bundle2.pdb"),
+                tempDir.resolve("4v5k-pdb-bundle4.pdb")
+        ), List.copyOf(result.bundlePaths()));
+        assertEquals(List.of(
                 new BeemMappingParser.Entry("4v5k-pdb-bundle2.pdb", "B", "BB"),
                 new BeemMappingParser.Entry("4v5k-pdb-bundle2.pdb", "S", "BV"),
                 new BeemMappingParser.Entry("4v5k-pdb-bundle4.pdb", "B", "DB")
