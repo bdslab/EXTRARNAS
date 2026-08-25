@@ -6,7 +6,9 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 
-<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="898.0" prefWidth="1375.0" stylesheets="@../css/home.css" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="it.unicam.cs.bdslab.extrarnas.view.HomeController">
+<ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="AS_NEEDED" pannable="true" styleClass="main-scroll-pane" stylesheets="@../css/home.css" vbarPolicy="AS_NEEDED" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="it.unicam.cs.bdslab.extrarnas.view.HomeController">
+   <content>
+<BorderPane minHeight="700.0" minWidth="1200.0" prefHeight="898.0" prefWidth="1375.0">
     <top>
         <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
             <top>
@@ -95,7 +97,7 @@
         </BorderPane>
     </top>
    <bottom>
-        <BorderPane fx:id="paneTranslationCleaning" prefHeight="196.0" prefWidth="1375.0" stylesheets="@../css/home.css" BorderPane.alignment="CENTER">
+        <BorderPane fx:id="paneTranslationCleaning" prefHeight="160.0" prefWidth="1375.0" stylesheets="@../css/home.css" BorderPane.alignment="CENTER">
             <left>
                 <BorderPane prefHeight="153.0" prefWidth="60.0" BorderPane.alignment="CENTER" />
             </left>
@@ -103,7 +105,7 @@
             <BorderPane fx:id="abstractionsPane" prefHeight="153.0" prefWidth="45.0" BorderPane.alignment="CENTER" />
          </right>
          <bottom>
-            <BorderPane prefHeight="146.0" prefWidth="1246.0" BorderPane.alignment="CENTER">
+            <BorderPane prefHeight="126.0" prefWidth="1246.0" BorderPane.alignment="CENTER">
                <left>
                   <ImageView fitHeight="52.0" fitWidth="166.0" pickOnBounds="true" preserveRatio="true" BorderPane.alignment="CENTER">
                      <image>
@@ -129,7 +131,7 @@
                   <Insets bottom="-15.0" left="15.0" right="15.0" top="20.0" />
                </BorderPane.margin>
                <top>
-                  <BorderPane prefHeight="74.0" prefWidth="1270.0" BorderPane.alignment="CENTER">
+                  <BorderPane prefHeight="34.0" prefWidth="1270.0" BorderPane.alignment="CENTER">
                      <top>
                         <GridPane prefHeight="34.0" prefWidth="1270.0" BorderPane.alignment="CENTER">
                           <columnConstraints>
@@ -153,9 +155,6 @@
                            </BorderPane.margin>
                         </GridPane>
                      </top>
-                     <bottom>
-                        <Label prefHeight="35.0" prefWidth="1270.0" text="This website received funding from the European Union - Next-GenerationEU - National Recovery and Resilience Plan (NRRP) – MISSION 4 COMPONENT 2, INVESTMENT N. 1.1, CALL PRIN 2022 PNRR D.D. 1409 of 14th Sep 2022 - RNA2Fun CUP N. J53D23014960001" textAlignment="CENTER" wrapText="true" BorderPane.alignment="CENTER" />
-                     </bottom>
                   </BorderPane>
                </top>
             </BorderPane>
@@ -229,3 +228,5 @@
         </BorderPane>
    </center>
 </BorderPane>
+   </content>
+</ScrollPane>

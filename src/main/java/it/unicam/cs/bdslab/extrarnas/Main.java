@@ -18,6 +18,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.VBox;
+import javafx.geometry.Rectangle2D;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -190,6 +192,7 @@ public class Main extends Application {
         try {
             load(stage, "/fxml/setup.fxml");
             stage.show();
+            stage.centerOnScreen();
         } catch (IOException | URISyntaxException e) {
             logger.severe("Failed to open setup: " + e.getMessage());
         }
@@ -198,8 +201,9 @@ public class Main extends Application {
     public void openHome() {
         try {
             stage = load(stage, "/fxml/home.fxml");
-            stage.setMinWidth(1300);
-            stage.setMinHeight(700);
+            stage.setMinWidth(900);
+            stage.setMinHeight(600);
+            sizeAndCenterHomeStage(stage);
 
             stage.setOnCloseRequest(event -> {
                 event.consume();
@@ -220,6 +224,22 @@ public class Main extends Application {
         } catch (IOException | URISyntaxException e) {
             logger.severe("Failed to open home: " + e.getMessage());
         }
+    }
+
+    private static void sizeAndCenterHomeStage(Stage stage) {
+        Screen screen = Screen.getScreensForRectangle(
+                        stage.getX(), stage.getY(), stage.getWidth(), stage.getHeight())
+                .stream()
+                .findFirst()
+                .orElse(Screen.getPrimary());
+        Rectangle2D bounds = screen.getVisualBounds();
+
+        double width = Math.min(1375, bounds.getWidth() * 0.95);
+        double height = Math.min(898, bounds.getHeight() * 0.92);
+        stage.setWidth(width);
+        stage.setHeight(height);
+        stage.setX(bounds.getMinX() + (bounds.getWidth() - width) / 2);
+        stage.setY(bounds.getMinY() + (bounds.getHeight() - height) / 2);
     }
 
     private static Stage load(Stage stage, String path) throws IOException, URISyntaxException {

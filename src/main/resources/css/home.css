@@ -5,6 +5,15 @@
     -fx-background-color: #ffffff;
 }
 
+.main-scroll-pane,
+.main-scroll-pane > .viewport {
+    -fx-background-color: #ffffff;
+}
+
+.main-scroll-pane {
+    -fx-padding: 0;
+}
+
 .menu {
     -fx-base: #1b3b5d;
 }
@@ -55,5 +64,4 @@
     -fx-background-color: white;    /* White background when selected */
     -fx-text-fill: black;           /* Black text when selected */
 }
-
 
