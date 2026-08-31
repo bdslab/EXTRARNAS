@@ -1,6 +1,11 @@
 cff-version: 1.2.0
+
 title: EXTRARNAS
-message: "If you use this software, please cite the associated publication."
+
+message: >
+  If you use EXTRARNAS in your research, please cite the associated publication
+  and, when appropriate, the software release.
+
 type: software
 
 authors:
@@ -14,6 +19,7 @@ authors:
 
   - family-names: "Hierro Canchari"
     given-names: "Piero"
+    orcid: "https://orcid.org/0009-0007-3747-3716"
 
   - family-names: "Quadrini"
     given-names: "Michela"
@@ -27,6 +33,31 @@ repository-code: "https://github.com/bdslab/EXTRARNAS"
 
 license: Apache-2.0
 
-version: "v1.0.1-cibb2026"
+version: "v1.0.2-cibb2026"
 
-date-released: 2026-07-07
+date-released: 2026-08-25
+
+preferred-citation:
+  type: preprint
+
+  title: "EXTRARNAS: A Framework for Extracting RNA Structures with Multiple Tools"
+
+  authors:
+    - family-names: "Di Petta"
+      given-names: "Federico"
+    - family-names: "Rosati"
+      given-names: "Piermichele"
+    - family-names: "Hierro Canchari"
+      given-names: "Piero"
+    - family-names: "Quadrini"
+      given-names: "Michela"
+    - family-names: "Tesei"
+      given-names: "Luca"
+
+  journal: "bioRxiv"
+
+  year: 2026
+
+  doi: 10.64898/2026.08.27.747497
+
+  url: https://doi.org/10.64898/2026.08.27.747497
