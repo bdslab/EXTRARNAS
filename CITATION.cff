@@ -38,7 +38,7 @@ version: "v1.0.2-cibb2026"
 date-released: 2026-08-25
 
 preferred-citation:
-  type: preprint
+  type: article
 
   title: "EXTRARNAS: A Framework for Extracting RNA Structures with Multiple Tools"
 
