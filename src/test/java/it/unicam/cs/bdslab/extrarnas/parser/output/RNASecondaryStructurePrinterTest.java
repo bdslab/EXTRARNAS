@@ -46,18 +46,18 @@ public class RNASecondaryStructurePrinterTest {
     @Test
     @DisplayName("canonical BPSEQ: a pair cWW produce two rows with correct indexes")
     void canonicalSinglePair() {
+        String seq = "GAAAAC";
         // Position 0 (G) - position 5 (C), cWW => 1-based indices: 1 and 6.
         Pair p = new Pair(0, 5, "G", "C", BondType.LEONTIS_WESTHOF_cWW);
         ExtendedRNASecondaryStructure s = new ExtendedRNASecondaryStructure.Builder()
-                .setSequence("GAAAAC")
+                .setSequence(seq)
                 .addPair(p)
                 .build();
 
         String result = exporter.printCanonicalBPSEQ(s);
         String[] lines = result.strip().split("\n");
 
-        // There must be exactly two rows because positions 1 and 6 are paired.
-        assertEquals(2, lines.length);
+        assertEquals(seq.length(), lines.length);
 
         // First row: position 1, G, partner 6.
         String[] col1 = lines[0].split(" ");
@@ -66,7 +66,7 @@ public class RNASecondaryStructurePrinterTest {
         assertEquals("6", col1[2]);
 
         // Second row: position 6, C, partner 1.
-        String[] col2 = lines[1].split(" ");
+        String[] col2 = lines[5].split(" ");
         assertEquals("6", col2[0]);
         assertEquals("C", col2[1]);
         assertEquals("1", col2[2]);
@@ -82,7 +82,11 @@ public class RNASecondaryStructurePrinterTest {
                 .build();
 
         String result = exporter.printCanonicalBPSEQ(s);
-        assertTrue(result.isEmpty(), "Non-canonical pairs should not appear in the canonical BPSEQ");
+        for (String line : result.lines().toList()) {
+            String[] cols = line.split(" ");
+            if (!cols[2].equals("0"))
+                fail("Non-canonical pair should not appear in the canonical BPSEQ: " + line);
+        }
     }
 
     @Test
@@ -102,7 +106,7 @@ public class RNASecondaryStructurePrinterTest {
                 .lines()
                 .filter(l -> !l.isBlank())
                 .count();
-        assertEquals(4, lineCount);
+        assertEquals(6, lineCount);
     }
 
     // ------------------------------------------------------------------ //

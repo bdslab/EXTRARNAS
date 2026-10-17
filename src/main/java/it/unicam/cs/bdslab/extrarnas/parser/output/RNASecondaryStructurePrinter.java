@@ -66,14 +66,14 @@ public class RNASecondaryStructurePrinter {
 
         for (int i = 0; i < seq.length(); i++) {
             Pair pair = findPair(i, pairs);
-
-            if (pair == null) continue;
-
+            
             sb.append(i + 1)
                     .append(" ")
                     .append(seq.charAt(i))
                     .append(" ")
-                    .append((pair.getPos1() == i ? pair.getPos2() : pair.getPos1()) + 1)
+                    .append( pair != null
+                        ? (pair.getPos1() == i ? pair.getPos2() : pair.getPos1()) + 1
+                        : 0)
                     .append("\n");
         }
         return sb.toString();
