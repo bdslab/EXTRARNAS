@@ -21,6 +21,12 @@ RUN dpkg --add-architecture i386 && apt-get update && apt-get install -y \
 # Clone and install tools
 RUN pip install RNApolis &&\
     pip install mmcif-pdbx && \
+    git clone https://github.com/BGSU-RNA/fr3d-python.git && \
+    cd fr3d-python && python -m pip install . && cd .. && \
+    git clone https://github.com/computational-biology/bpnet.git && \
+    cp -r bpnet/sysfiles/* /usr/local/bin && \
+    git clone https://github.com/srnas/barnaba.git && \
+    cd barnaba && pip install -e . && cd .. && \
     git clone https://github.com/rcsb/RNAView.git && \
     cd RNAView && make && cd .. && \
     git clone https://github.com/kad-ecoli/BeEM.git && \

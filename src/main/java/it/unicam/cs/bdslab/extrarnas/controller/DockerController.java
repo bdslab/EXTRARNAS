@@ -421,6 +421,80 @@ public class DockerController {
         // Start and attach to output
         dockerClient.execStartCmd(execCreateCmdResponse.getId()).exec(new ExecStartResultCallback(System.out, System.err)).awaitCompletion();
     }
+    
+    public void baRNAba() throws InterruptedException {
+        String shellCmd =
+                "mkdir -p /data/barnaba-output && " +
+                        "for file in " + this.preprocessingPath + "/*.pdb; do " +
+                        "filename=$(basename \"$file\"); " +
+                        "name=\"${filename%.}\"; " +
+                        "./barnaba/bin/barnaba ANNOTATE --pdb \"$file\" 2> ${name}.err;" +
+                        "cat ${name}.err outfile.ANNOTATE.pairing.out > ${name}.pairing.out;" +
+                        "cat ${name}.err outfile.ANNOTATE.stacking.out >> ${name}.stacking.out;" +
+                        "mv ${name}.pairing.out \"/data/barnaba-output/${name}.ANNOTATE.pairing.out\"; " +
+                        "mv ${name}.stacking.out \"/data/barnaba-output/${name}.ANNOTATE.stacking.out\"; " +
+                        "done";
+
+        // Create exec command
+        ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(container.getId()).withAttachStdout(true).withAttachStderr(true).withCmd("bash", "-c", shellCmd).exec();
+
+        // Start and attach to output
+        dockerClient.execStartCmd(execCreateCmdResponse.getId()).exec(new ExecStartResultCallback(System.out, System.err)).awaitCompletion();
+    }
+
+    public void bpnet() throws InterruptedException {
+        String shellCmd = "mkdir -p /data/bpnet-output && "
+                + "cd /home/bpnet/bin && " +
+                "for file in " + this.preprocessingPath + "/*.pdb; do " +
+                "  filename=$(basename \"$file\"); " +
+                "  prefix=\"${filename%.*}\"; " +
+                "  ./bpnet.linux \"$file\"; " +
+                "  for output in " + this.preprocessingPath + "/${prefix}*; do " +
+                "    [ \"$output\" = \"$file\" ] && continue; " +  // skip the input file
+                "    outname=$(basename \"$output\"); " +
+                "    mv \"$output\" \"/data/bpnet-output/${prefix}.$outname\"; " +
+                "  done; " +
+                "done";
+
+
+        // Create exec command
+        ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(container.getId()).withAttachStdout(true).withAttachStderr(true).withCmd("bash", "-c", shellCmd).exec();
+
+        // Start and attach to output
+        dockerClient.execStartCmd(execCreateCmdResponse.getId()).exec(new ExecStartResultCallback(System.out, System.err)).awaitCompletion();
+    }
+
+    public void fr3d() throws InterruptedException {
+        String shellCmd =
+                "cd /home/fr3d-python/fr3d/classifiers/ && " +
+                        "for file in " + this.preprocessingPath + "/*.cif; do " +
+                        "filename=$(basename \"$file\" .cif); " +
+                        "python NA_pairwise_interactions.py -o /data/fr3d-output/ -f ebi_json --input " + this.preprocessingPath + " ${filename}.cif; " +
+                      //  "mv /data/fr3d-output/${filename}_*_basepair.json /data/fr3d-output/${filename}_basepair.json; " +
+                        "done";
+
+        // Create exec command
+        ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(container.getId()).withAttachStdout(true).withAttachStderr(true).withCmd("bash", "-c", shellCmd).exec();
+
+        // Start and attach to output
+        dockerClient.execStartCmd(execCreateCmdResponse.getId()).exec(new ExecStartResultCallback(System.out, System.err)).awaitCompletion();
+    }
+
+    public void x3dnaBy(String containerName) throws InterruptedException, IOException {
+        String shellCmd =
+                "set -e; cd /data; mkdir -p x3dna-output; mkdir -p x3dna-tmp; cd x3dna-tmp;" +
+                        "for file in " + this.preprocessingPath + "/*.pdb; do " +
+                        "  filename=$(basename \"$file\"); " +
+                        "  prefix=\"${filename%.*}\"; " +
+                        // EXAMPLE x3dna-dssr -i=/data/1YMO.pdb --pair-only --json -o=ex.json
+                        "  x3dna-dssr -i=\"$file\" --pair-only --json -o=\"${prefix}_dssr.json\"; " +
+                        "  mv \"${prefix}_dssr.json\" /data/x3dna-output/; " +
+                        "done; " +
+                "cd ..; rm -rf x3dna-tmp";
+
+        new ProcessBuilder("docker", "exec", containerName, "bash", "-c", shellCmd)
+                .inheritIO().start().waitFor();
+    }
 
     public void mcAnnotate() throws InterruptedException {
         String shellCmd =
@@ -690,4 +764,121 @@ public class DockerController {
             logger.info("Deleted folder: " + dir);
         }
     }
+
+    public boolean dockerImageExists(String imageName) {
+        try {
+            Process checkImage = new ProcessBuilder("docker", "images", "-q", imageName)
+                    .redirectErrorStream(true)
+                    .start();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(checkImage.getInputStream()));
+            String imageId = reader.readLine();
+            checkImage.waitFor();
+            return imageId != null && !imageId.isEmpty();
+        } catch (Exception e) {
+            logger.severe("Failed checking image " + imageName + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean isX3DNABuildContextAvailable(File dockerFile) {
+        if (dockerFile == null) return false;
+        File contextDir = dockerFile.getParentFile();
+        if (contextDir == null) return false;
+        File requiredArchive = new File(contextDir, "dssr-basic-linux-v2.8.1.zip");
+        return requiredArchive.isFile();
+    }
+
+    public int buildxDockerContainerBy(File dockerFile, String imageName, String imageTag, String containerName) throws IOException, InterruptedException {
+        File contextDir = dockerFile.getParentFile();
+
+        // Check if the image already exists
+        Process checkImage = new ProcessBuilder("docker", "images", "-q", imageName)
+                .redirectErrorStream(true)
+                .start();
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(checkImage.getInputStream()));
+        String imageId = reader.readLine();
+        checkImage.waitFor();
+
+        if ((imageId == null || imageId.isEmpty()) && !isX3DNABuildContextAvailable(dockerFile)) {
+            logger.severe("Skipping X3DNA setup: required archive dssr-basic-linux-v2.8.1.zip is missing in "
+                    + contextDir.getAbsolutePath());
+            return 0;
+        }
+
+        if (imageId == null || imageId.isEmpty()) {
+            logger.info("Building " + imageName + " image...");
+            // Create buildx builder
+            int buildxCreateExitCode = new ProcessBuilder("docker", "buildx", "create", "--use")
+                    .inheritIO().start().waitFor();
+            if (buildxCreateExitCode != 0) {
+                logger.severe("Failed to create buildx builder for " + imageName + ". Exit code: " + buildxCreateExitCode);
+                return 0;
+            }
+
+            // Build image
+            int buildExitCode = new ProcessBuilder(
+                    "docker", "buildx", "build",
+                    "--platform", "linux/amd64",
+                    "-f", dockerFile.getAbsolutePath(),
+                    "-t", imageName,
+                    "--load",
+                    contextDir.getAbsolutePath()
+            ).inheritIO().start().waitFor();
+            if (buildExitCode != 0) {
+                logger.severe("Failed to build image " + imageName + ". Exit code: " + buildExitCode);
+                return 0;
+            }
+            logger.info("Image built: " + imageName);
+        } else {
+            logger.info("Image " + imageName + " already exists. Skipping build.");
+        }
+
+        // Check and remove existing container
+        Process checkContainer = new ProcessBuilder("docker", "ps", "-a", "-q", "-f", "name=" + containerName)
+                .redirectErrorStream(true)
+                .start();
+
+        BufferedReader containerReader = new BufferedReader(new InputStreamReader(checkContainer.getInputStream()));
+        String existingContainerId = containerReader.readLine();
+        checkContainer.waitFor();
+
+        if (existingContainerId != null && !existingContainerId.isEmpty()) {
+            int removeExitCode = new ProcessBuilder("docker", "rm", "-f", containerName)
+                    .inheritIO().start().waitFor();
+            if (removeExitCode != 0) {
+                logger.severe("Failed removing existing container " + containerName + ". Exit code: " + removeExitCode);
+                return 0;
+            }
+        }
+
+        // Run container with shared volume
+        int runExitCode = new ProcessBuilder(
+                "docker", "run",
+                "--platform", "linux/amd64",
+                "--name", containerName,
+                "-v", sharedFolder.toAbsolutePath() + ":/data",
+                "-dit",
+                imageName,
+                "bash"
+        ).inheritIO().start().waitFor();
+        if (runExitCode != 0) {
+            logger.severe("Failed running container " + containerName + ". Exit code: " + runExitCode);
+            return 0;
+        }
+
+        logger.info("Container started with shared folder: " + containerName);
+
+        String resolvedContainerId = this.resolveContainerId(containerName);
+        if (resolvedContainerId == null) {
+            logger.severe("Cannot resolve container ID for " + containerName + " after start.");
+            return 0;
+        }
+        makeDirInContainer(resolvedContainerId, "/data/preprocessed");
+
+        return 1;
+    }
+
+
 }

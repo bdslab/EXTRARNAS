@@ -1,9 +1,12 @@
 package it.unicam.cs.bdslab.extrarnas.view.utils;
 
-
 public enum TOOL {
     RNAVIEW("RNAVIEW"),
     RNAPOLIS_ANNOTATOR("RNAPOLIS_ANNOTATOR"),
+    BARNABA("BARNABA"),
+    BPNET("BPNET"),
+    FR3D("FR3D"),
+    X3DNA("X3DNA"),
     MC_ANNOTATE("MC_ANNOTATE");
 
     private final String name;
@@ -28,19 +31,19 @@ public enum TOOL {
 
     @Override
     public String toString() {
-        return name.replace("_", " ");
-    }
-
-    public boolean visible() {
-        return switch (this) {
-            case RNAVIEW, MC_ANNOTATE, RNAPOLIS_ANNOTATOR -> true;
-        };
+        return name.replaceAll("_", " ");
     }
 
     public boolean giveStructure() {
         return switch (this) {
-            case RNAVIEW -> false;
-            case MC_ANNOTATE, RNAPOLIS_ANNOTATOR -> true;
+            case X3DNA, FR3D, RNAVIEW -> false;
+            case BARNABA, BPNET, MC_ANNOTATE, RNAPOLIS_ANNOTATOR -> true;
+        };
+    }
+
+    public boolean visible() {
+        return switch (this) {
+            case RNAVIEW, MC_ANNOTATE, RNAPOLIS_ANNOTATOR, BARNABA, BPNET, FR3D, X3DNA  -> true;
         };
     }
 }

@@ -1,5 +1,14 @@
 package it.unicam.cs.bdslab.extrarnas.controller;
 
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.JSON.JSONLexer;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.JSON.JSONParser;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.barnaba.BarnabaCustomListener;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.barnaba.BarnabaGrammarLexer;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.barnaba.BarnabaGrammarParser;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.bpnet.BpnetGrammarLexer;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.bpnet.BpnetGrammarParser;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.bpnet.BpnetParserCustomListener;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.fred.JSONFr3dListener;
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.McAnnotateCustomListener;
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.McAnnotateGrammarLexer;
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.McAnnotateGrammarParser;
@@ -9,6 +18,7 @@ import it.unicam.cs.bdslab.extrarnas.parser.listeners.rnapolis.RNApolisGrammarPa
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.rnaview.RNAviewCustomListener;
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.rnaview.RNAviewGrammarLexer;
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.rnaview.RNAviewGrammarParser;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.x3dna.JSONX3dnaListener;
 import it.unicam.cs.bdslab.extrarnas.parser.models.ExtendedRNASecondaryStructure;
 import it.unicam.cs.bdslab.extrarnas.parser.output.RNASecondaryStructurePrinter;
 import it.unicam.cs.bdslab.extrarnas.view.utils.TOOL;
@@ -93,6 +103,10 @@ public class ExtendedBPSEQExportController {
         return switch (tool) {
             case RNAVIEW -> parseRNAView(sharedDirectory.resolve("rnaview-output"));
             case RNAPOLIS_ANNOTATOR -> parseRNApolis(sharedDirectory.resolve("rnapolis-output"));
+            case BARNABA -> parseBarnaba(sharedDirectory.resolve("barnaba-output"));
+            case BPNET -> parseBPNET(sharedDirectory.resolve("bpnet-output"));
+            case FR3D -> parseFR3D(sharedDirectory.resolve("fr3d-output"));
+            case X3DNA -> parseX3DNA(sharedDirectory.resolve("x3dna-output"));
             case MC_ANNOTATE -> parseMCAnnotate(sharedDirectory.resolve("mc-annotate-output"));
         };
     }
@@ -121,6 +135,55 @@ public class ExtendedBPSEQExportController {
                 String suffix = structures.size() > 1 ? "_" + (i + 1) : "";
                 result.add(new ExportItem(baseNameFor(TOOL.RNAPOLIS_ANNOTATOR, file), suffix, structures.get(i)));
             }
+        }
+        return result;
+    }
+
+    
+    private List<ExportItem> parseBarnaba(Path folder) throws IOException {
+        List<ExportItem> result = new ArrayList<>();
+        for (Path file : listFiles(folder, ".ANNOTATE.pairing.out")) {
+            var lexer = new BarnabaGrammarLexer(CharStreams.fromPath(file));
+            var parser = new BarnabaGrammarParser(new CommonTokenStream(lexer));
+            var listener = new BarnabaCustomListener();
+            ParseTreeWalker.DEFAULT.walk(listener, parser.barnabaFile());
+            result.add(new ExportItem(baseNameFor(TOOL.BARNABA, file), "", listener.getStructure()));
+        }
+        return result;
+    }
+
+    private List<ExportItem> parseBPNET(Path folder) throws IOException {
+        List<ExportItem> result = new ArrayList<>();
+        for (Path file : listFiles(folder, ".out")) {
+            var lexer = new BpnetGrammarLexer(CharStreams.fromPath(file));
+            var parser = new BpnetGrammarParser(new CommonTokenStream(lexer));
+            var listener = new BpnetParserCustomListener();
+            ParseTreeWalker.DEFAULT.walk(listener, parser.bpnetFile());
+            result.add(new ExportItem(baseNameFor(TOOL.BPNET, file), "", listener.getStructure()));
+        }
+        return result;
+    }
+
+    private List<ExportItem> parseFR3D(Path folder) throws IOException {
+        List<ExportItem> result = new ArrayList<>();
+        for (Path file : listFiles(folder, ".json")) {
+            var lexer = new JSONLexer(CharStreams.fromPath(file));
+            var parser = new JSONParser(new CommonTokenStream(lexer));
+            var listener = new JSONFr3dListener();
+            ParseTreeWalker.DEFAULT.walk(listener, parser.json());
+            result.add(new ExportItem(baseNameFor(TOOL.FR3D, file), "", listener.getStructure()));
+        }
+        return result;
+    }
+
+    private List<ExportItem> parseX3DNA(Path folder) throws IOException {
+        List<ExportItem> result = new ArrayList<>();
+        for (Path file : listFiles(folder, ".json")) {
+            var lexer = new JSONLexer(CharStreams.fromPath(file));
+            var parser = new JSONParser(new CommonTokenStream(lexer));
+            var listener = new JSONX3dnaListener();
+            ParseTreeWalker.DEFAULT.walk(listener, parser.json());
+            result.add(new ExportItem(baseNameFor(TOOL.X3DNA, file), "", listener.getStructure()));
         }
         return result;
     }
@@ -157,6 +220,14 @@ public class ExtendedBPSEQExportController {
         return Arrays.stream((switch (tool) {
             case RNAVIEW -> stripSuffixes(name, ".pdb.out", ".out");
             case RNAPOLIS_ANNOTATOR -> stripSuffixes(name, ".3db");
+            case BARNABA -> stripSuffixes(name, ".ANNOTATE.pairing.out", ".ANNOTATE.stacking.out", ".out");
+            case BPNET -> {
+                String cleaned = stripSuffixes(name, ".out");
+                int split = cleaned.indexOf('.');
+                yield split > 0 ? cleaned.substring(0, split) : cleaned;
+            }
+            case FR3D -> stripSuffixes(name, "_basepair.json", ".json");
+            case X3DNA -> stripSuffixes(name, "_dssr.json", ".json");
             case MC_ANNOTATE -> stripSuffixes(name, ".txt");
         }).split("_"))
                 .limit(2)

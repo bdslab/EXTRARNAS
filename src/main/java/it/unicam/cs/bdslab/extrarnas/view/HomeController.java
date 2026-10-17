@@ -16,7 +16,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
 import javafx.scene.control.*;
 
 import javafx.scene.control.cell.CheckBoxListCell;
@@ -36,7 +35,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.List;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,9 +51,13 @@ public class HomeController {
     public static final Logger logger = Logger.getLogger("it.unicam.cs.bdslab.extrarnas.view.HomeController");
 
     public static final String dockerAllToolsImage = "extrarnas-core";
-    public static final String dockerAllToolsImageTag = "1.0.2-cibb2026";
+    public static final String dockerAllToolsImageTag = "2.0.0";
     public static final String dockerAllToolsContainer = "extrarnas-core-container";
     public static final String dockerfileAllToolsPath = "./docker/all-tools";
+    public static final String dockerX3DNAImage = "x3dna-image";
+    public static final String dockerX3DNAImageTag = "latest";
+    public static final String dockerX3DNAContainer = "x3dna-container";
+    public static final String dockerfileX3DNAPath = "./docker/x3dna-tool/Dockerfile";
 
     private IOController ioController;
     private DockerController dockerController;
@@ -116,7 +118,7 @@ public class HomeController {
 
     @FXML
     private ChoiceBox<RNASecondaryStructurePrinter.OutputFormat> select_outputESS;
-
+    private boolean x3dnaAvailable = true;
     private Map<TOOL, BooleanProperty> checkedItems = new HashMap<>();
 
     private final ObservableList<StructureInfo> structures = FXCollections.observableArrayList();
@@ -569,6 +571,10 @@ public class HomeController {
                 .map(Map.Entry::getKey)
                 .toList();
 
+        if (!x3dnaAvailable) {
+            selectedTools = selectedTools.stream().filter(t -> t != X3DNA).toList();
+        }
+
         logger.info("Selected tools: " + selectedTools);
         if (selectedTools.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "No Tool Selected", "", "Please select at least one tool to run.");
@@ -709,7 +715,7 @@ public class HomeController {
         new Thread(task).start();
     }
 
-    private Map<TOOL, Runnable> actionsMap = Map.of(
+   private Map<TOOL, Runnable> actionsMap = Map.of(
             RNAPOLIS_ANNOTATOR, () -> {
                 try {
                     this.dockerController.rnapolisAnnotator();
@@ -724,6 +730,34 @@ public class HomeController {
                     throw new RuntimeException(e);
                 }
             },
+            BARNABA, () -> {
+                try {
+                    this.dockerController.baRNAba();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            },
+            BPNET, () -> {
+                try {
+                    this.dockerController.bpnet();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            },
+            FR3D, () -> {
+                try {
+                    this.dockerController.fr3d();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            },
+            X3DNA, () -> {
+                try {
+                    this.dockerController.x3dnaBy(dockerX3DNAContainer);
+                } catch (InterruptedException | IOException e) {
+                    throw new RuntimeException(e);
+                }
+            },
             MC_ANNOTATE, () -> {
                 try {
                     this.dockerController.mcAnnotate();
@@ -733,7 +767,21 @@ public class HomeController {
             });
 
     private void refreshToolListAvailability() {
+        boolean imageAvailable = dockerController.dockerImageExists(dockerX3DNAImage);
+        boolean zipAvailable = dockerController.isX3DNABuildContextAvailable(new File(dockerfileX3DNAPath));
+        this.x3dnaAvailable = imageAvailable || zipAvailable;
+        
         ObservableList<TOOL> tools = FXCollections.observableArrayList(Arrays.stream(values()).filter(TOOL::visible).toList());
+        
+        if (!x3dnaAvailable) {
+            tools.remove(X3DNA);
+            BooleanProperty selected = checkedItems.get(X3DNA);
+            if (selected != null) {
+                selected.set(false);
+            }
+            logger.warning("X3DNA hidden: missing image and required archive dssr-basic-linux-v2.8.1.zip in docker/x3dna-tool.");
+        }
+        
         toolListView.setItems(tools);
     }
 
