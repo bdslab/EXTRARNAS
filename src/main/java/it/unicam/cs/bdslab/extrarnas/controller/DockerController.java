@@ -293,7 +293,8 @@ public class DockerController {
      */
     public boolean stopContainerByNameOrId(String containerNameOrId, Integer timeoutSeconds) {
         Objects.requireNonNull(containerNameOrId, "containerNameOrId");
-
+        if (!this.isContainerRunning(containerNameOrId))
+            return true;
         // 1) Try Docker Java API first
         try {
             // resolve the container ID by name or ID/prefix
