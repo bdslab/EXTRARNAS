@@ -396,8 +396,11 @@ public class DockerController {
                 + "cd /home/RNAView/bin && "
                 + "for file in " + this.preprocessingPath + "/*.pdb; do "
                 + "filename=$(basename \"$file\"); "
+                + "prefix=\"${filename%.*}\"; "
                 + "./rnaview \"$file\"; "
-                + "find " + this.preprocessingPath + " -maxdepth 1 -type f -name \"${filename%.*}.*\" -newer \"$file\" -exec mv {} /data/rnaview-output/ \\;; "
+                + "find " + this.preprocessingPath + " -maxdepth 1 -type f -name \"${prefix}.*\" "
+                + "! -name \"${prefix}.pdb\" ! -name \"${prefix}.cif\" "
+                + "-newer \"$file\" -exec mv {} /data/rnaview-output/ \\;; "
                 + "done";
 
         // Create exec command
@@ -445,17 +448,20 @@ public class DockerController {
 
     public void bpnet() throws InterruptedException {
         String shellCmd = "mkdir -p /data/bpnet-output && "
-                + "cd /home/bpnet/bin && " +
-                "for file in " + this.preprocessingPath + "/*.pdb; do " +
-                "  filename=$(basename \"$file\"); " +
-                "  prefix=\"${filename%.*}\"; " +
-                "  ./bpnet.linux \"$file\"; " +
-                "  for output in " + this.preprocessingPath + "/${prefix}*; do " +
-                "    [ \"$output\" = \"$file\" ] && continue; " +  // skip the input file
-                "    outname=$(basename \"$output\"); " +
-                "    mv \"$output\" \"/data/bpnet-output/${prefix}.$outname\"; " +
-                "  done; " +
-                "done";
+                + "cd /home/bpnet/bin && "
+                + "for file in " + this.preprocessingPath + "/*.pdb; do "
+                + "  filename=$(basename \"$file\"); "
+                + "  prefix=\"${filename%.*}\"; "
+                + "  tmpdir=$(mktemp -d); "
+                + "  cp \"$file\" \"$tmpdir/\"; "
+                + "  ./bpnet.linux \"$tmpdir/$filename\"; "
+                + "  for output in \"$tmpdir\"/*; do "
+                + "    outname=$(basename \"$output\"); "
+                + "    [ \"$outname\" = \"$filename\" ] && continue; "
+                + "    mv \"$output\" \"/data/bpnet-output/${prefix}.$outname\"; "
+                + "  done; "
+                + "  rm -rf \"$tmpdir\"; "
+                + "done";
 
 
         // Create exec command
