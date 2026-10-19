@@ -51,7 +51,7 @@ public class HomeController {
     public static final Logger logger = Logger.getLogger("it.unicam.cs.bdslab.extrarnas.view.HomeController");
 
     public static final String dockerAllToolsImage = "extrarnas-core";
-    public static final String dockerAllToolsImageTag = "2.0.0";
+    public static final String dockerAllToolsImageTag = "2.0.1";
     public static final String dockerAllToolsContainer = "extrarnas-core-container";
     public static final String dockerfileAllToolsPath = "./docker/all-tools";
     public static final String dockerX3DNAImage = "x3dna-image";
