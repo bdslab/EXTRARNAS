@@ -80,6 +80,11 @@ public class Pair {
         return nucleotide2;
     }
 
+    public void remapPositions(java.util.function.IntUnaryOperator mapping) {
+        pos1 = mapping.applyAsInt(pos1);
+        pos2 = mapping.applyAsInt(pos2);
+    }
+
     @Override
     public String toString() {
         return "(" + type + " " + pos1 + ":" + nucleotide1 + " " + pos2 + ":" + nucleotide2 + ")";

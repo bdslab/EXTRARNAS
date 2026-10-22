@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.IntUnaryOperator;
 
 public class ExtendedRNASecondaryStructure {
     private String sequence;
@@ -40,6 +41,10 @@ public class ExtendedRNASecondaryStructure {
 
     public List<Pair> getCanonical() {
         return canonical;
+    }
+
+    public void remapPositions(IntUnaryOperator mapping) {
+        pairs.forEach(pair -> pair.remapPositions(mapping));
     }
 
     @Override

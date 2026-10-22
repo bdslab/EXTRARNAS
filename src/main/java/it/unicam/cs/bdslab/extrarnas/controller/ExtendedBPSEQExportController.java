@@ -1,5 +1,23 @@
 package it.unicam.cs.bdslab.extrarnas.controller;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
+
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.JSON.JSONLexer;
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.JSON.JSONParser;
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.barnaba.BarnabaCustomListener;
@@ -22,18 +40,6 @@ import it.unicam.cs.bdslab.extrarnas.parser.listeners.x3dna.JSONX3dnaListener;
 import it.unicam.cs.bdslab.extrarnas.parser.models.ExtendedRNASecondaryStructure;
 import it.unicam.cs.bdslab.extrarnas.parser.output.RNASecondaryStructurePrinter;
 import it.unicam.cs.bdslab.extrarnas.view.utils.TOOL;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class ExtendedBPSEQExportController {
 
@@ -51,8 +57,7 @@ public class ExtendedBPSEQExportController {
 
     public int exportForTool(TOOL tool, Path sharedDirectory,
         RNASecondaryStructurePrinter.OutputFormat secondaryStrcutureFormat,
-        RNASecondaryStructurePrinter.OutputFormat extendendStructureFormat,
-        Map<String, String> supportSequences
+        RNASecondaryStructurePrinter.OutputFormat extendendStructureFormat
     ) throws IOException {
         if (tool == null || sharedDirectory == null) return 0;
 
@@ -67,15 +72,12 @@ public class ExtendedBPSEQExportController {
 
         int exported = 0;
         for (ExportItem item : structures) {
-            if (!tool.giveStructure())
-                item.structure().setSequence(supportSequences.getOrDefault(sanitize(item.baseName()),
-                        "N".repeat(
-                                item.structure().getPairs().stream()
-                                        .mapToInt(p -> Math.max(p.getPos1(), p.getPos2()))
-                                        .max()
-                                        .orElse(0)
-                        )
-                ));
+            BioJavaController.FullChainSequence fullSequence =
+                    loadFullChainSequence(sharedDirectory, item.baseName());
+            if (tool == TOOL.RNAPOLIS_ANNOTATOR || tool == TOOL.RNAVIEW) {
+                item.structure().remapPositions(fullSequence::originalIndexForCompactedIndex);
+            }
+            item.structure().setSequence(fullSequence.sequence());
 
             if (secondaryStrcutureFormat != null) {
                 String content = printer.printCanonicalBPSEQ(item.structure());
@@ -93,6 +95,21 @@ public class ExtendedBPSEQExportController {
         }
 
         return exported;
+    }
+
+    private BioJavaController.FullChainSequence loadFullChainSequence(
+            Path sharedDirectory, String baseName) throws IOException {
+        int separator = baseName.indexOf('_');
+        if (separator < 1 || separator == baseName.length() - 1) {
+            throw new IOException("Cannot determine chain from tool output name: " + baseName);
+        }
+        String pdbId = baseName.substring(0, separator);
+        String chainId = baseName.substring(separator + 1);
+        Path cifPath = sharedDirectory.resolve(pdbId + ".cif");
+        if (!Files.isRegularFile(cifPath)) {
+            throw new IOException("Original CIF is required but missing: " + cifPath);
+        }
+        return BioJavaController.getInstance().readFullChainSequence(cifPath, chainId);
     }
 
     public Path getOutputDirectory(Path sharedDirectory) {
@@ -220,7 +237,7 @@ public class ExtendedBPSEQExportController {
         return Arrays.stream((switch (tool) {
             case RNAVIEW -> stripSuffixes(name, ".pdb.out", ".out");
             case RNAPOLIS_ANNOTATOR -> stripSuffixes(name, ".3db");
-            case BARNABA -> stripSuffixes(name, ".ANNOTATE.pairing.out", ".ANNOTATE.stacking.out", ".out");
+            case BARNABA -> stripSuffixes(name, ".pdb.ANNOTATE.pairing.out", ".pdb.ANNOTATE.stacking.out", ".out", ".cif.ANNOTATE.pairing.out");
             case BPNET -> {
                 String cleaned = stripSuffixes(name, ".out");
                 int split = cleaned.indexOf('.');
