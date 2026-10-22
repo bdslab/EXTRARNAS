@@ -452,7 +452,7 @@ public class DockerController {
                 + "for file in " + this.preprocessingPath + "/*.pdb; do "
                 + "  filename=$(basename \"$file\"); "
                 + "  prefix=\"${filename%.*}\"; "
-                + "  tmpdir=$(mktemp -d); "
+                + "  tmpdir=$(mktemp -d /tmp/bpnetXXXXXX); "
                 + "  cp \"$file\" \"$tmpdir/\"; "
                 + "  ./bpnet.linux \"$tmpdir/$filename\"; "
                 + "  for output in \"$tmpdir\"/*; do "
