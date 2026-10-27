@@ -47,13 +47,14 @@
                               <ProgressBar fx:id="preprocessingProgressBar" maxWidth="1.7976931348623157E308" prefWidth="1172.0" progress="0.0" />
                            </children>
                         </VBox>
-                      <TableView fx:id="filesTable" maxWidth="1172.0" minWidth="1100.0" prefHeight="266.0" prefWidth="1172.0" styleClass="table">
+                      <TableView fx:id="filesTable" maxWidth="1172.0" minWidth="1100.0" prefHeight="241.0" prefWidth="1172.0" styleClass="table">
                           <columns>
-                              <TableColumn fx:id="nameColumn" maxWidth="190.0" minWidth="190.0" prefWidth="190.0" resizable="false" styleClass="column" text="Name" />
-                              <TableColumn fx:id="chainColumn" maxWidth="160.0" minWidth="160.0" prefWidth="160.0" resizable="false" styleClass="column" text="Chain" />
-                              <TableColumn fx:id="statusColumn" maxWidth="130.0" minWidth="130.0" prefWidth="130.0" resizable="false" styleClass="column" text="Status" />
-                              <TableColumn fx:id="errorColumn" maxWidth="450.0" minWidth="450.0" prefWidth="450.0" resizable="false" styleClass="column" text="Error" />
-                              <TableColumn fx:id="deleteColumn" maxWidth="240.0" minWidth="240.0" prefWidth="240.0" resizable="false" styleClass="column" text="Actions" />
+                              <TableColumn fx:id="nameColumn" maxWidth="160.0" minWidth="160.0" prefWidth="160.0" resizable="false" styleClass="column" text="Name" />
+                              <TableColumn fx:id="chainColumn" maxWidth="90.0" minWidth="90.0" prefWidth="90.0" resizable="false" styleClass="column" text="Chain" />
+                              <TableColumn fx:id="modelColumn" maxWidth="60.0" minWidth="60.0" prefWidth="60.0" resizable="false" styleClass="column" text="Model" />
+                              <TableColumn fx:id="statusColumn" maxWidth="90.0" minWidth="90.0" prefWidth="90.0" resizable="false" styleClass="column" text="Status" />
+                              <TableColumn fx:id="errorColumn" maxWidth="500.0" minWidth="500.0" prefWidth="500.0" resizable="false" styleClass="column" text="Error" />
+                              <TableColumn fx:id="deleteColumn" maxWidth="258.4000244140625" minWidth="250.0" prefWidth="254.4000244140625" resizable="false" styleClass="column" text="Actions" />
                           </columns>
                       </TableView>
                      </children>
@@ -170,7 +171,7 @@
    <center>
         <BorderPane prefHeight="83.0" prefWidth="1375.0" BorderPane.alignment="CENTER">
          <top>
-                <ButtonBar prefHeight="60.0" prefWidth="1115.0" styleClass="buttons" BorderPane.alignment="CENTER">
+                <ButtonBar prefHeight="60.0" prefWidth="1189.0" styleClass="buttons" BorderPane.alignment="CENTER">
                <BorderPane.margin>
                   <Insets left="35.0" right="50.0" />
                </BorderPane.margin>

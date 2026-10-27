@@ -38,32 +38,64 @@ public class BioJavaController {
     }
 
     public List<Structure> filterById(Path path, String chainId) throws IOException {
+        return filterByModelAndChain(path, chainId, "*").stream()
+                .map(FilteredStructure::structure)
+                .toList();
+    }
+
+    public List<Structure> filterByStar(Path path) throws IOException {
+        return filterByModelAndChain(path, "*", "*").stream()
+                .map(FilteredStructure::structure)
+                .toList();
+    }
+
+    public List<FilteredStructure> filterByModelAndChain(Path path, String chainId,
+                                                          String modelFilter) throws IOException {
         var structure = reader.getStructure(path.toFile());
-        var filter = getFilter(chainId);
-        var structures = new ArrayList<Structure>();
-        for (Chain chain : structure.getChains()) {
-            if (filter.test(chain)) {
-                StructureImpl singleChainStructure = new StructureImpl();
-                singleChainStructure.addChain(chain);
-                structures.add(singleChainStructure);
+        var filter = getFilter("*");
+        filter = getFilter(chainId);
+        Set<Integer> requestedModels = parseModelFilter(modelFilter, structure.nrModels());
+        var structures = new ArrayList<FilteredStructure>();
+        for (int model = 0; model < structure.nrModels(); model++) {
+            if (!requestedModels.contains(model)) {
+                continue;
+            }
+            for (Chain chain : structure.getModel(model)) {
+                if (filter.test(chain)) {
+                    StructureImpl singleChainStructure = new StructureImpl();
+                    singleChainStructure.addChain(chain);
+                    structures.add(new FilteredStructure(singleChainStructure, model));
+                }
             }
         }
         return structures;
     }
 
-    public List<Structure> filterByStar(Path path) throws IOException {
-        var structure = reader.getStructure(path.toFile());
-        var filter = getFilter("*");
-
-        var structures = new ArrayList<Structure>();
-        for (Chain chain : structure.getChains()) {
-            if (filter.test(chain)) {
-                StructureImpl singleChainStructure = new StructureImpl();
-                singleChainStructure.addChain(chain);
-                structures.add(singleChainStructure);
+    private Set<Integer> parseModelFilter(String modelFilter, int modelCount) throws IOException {
+        if (modelFilter == null || modelFilter.isBlank() || modelFilter.equals("*")) {
+            return java.util.stream.IntStream.range(0, modelCount).boxed()
+                    .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        }
+        Set<Integer> models = new LinkedHashSet<>();
+        for (String value : modelFilter.split(";")) {
+            try {
+                int model = Integer.parseInt(value.trim());
+                if (model < 0 || model >= modelCount) {
+                    throw new IOException("Requested model " + model
+                            + " is outside the available range 0-" + (modelCount - 1));
+                }
+                models.add(model);
+            } catch (NumberFormatException e) {
+                throw new IOException("Invalid model filter: " + value, e);
             }
         }
-        return structures;
+        if (models.isEmpty()) {
+            throw new IOException("The model filter is empty");
+        }
+        return models;
+    }
+
+    public record FilteredStructure(Structure structure, int model) {
     }
 
     public void save(Structure structure, Path dst) throws IOException {

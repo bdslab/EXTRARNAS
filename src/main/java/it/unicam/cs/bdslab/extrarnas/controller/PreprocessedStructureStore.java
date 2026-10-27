@@ -8,7 +8,6 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -29,27 +28,37 @@ final class PreprocessedStructureStore {
                 String baseName = fileName.substring(0, fileName.length() - 4);
                 String[] parts = baseName.split("_");
                 String moleculeId = parts.length > 0 ? parts[0] : baseName;
-                String chain = parts.length > 1
-                        ? String.join("_", Arrays.copyOfRange(parts, 1, parts.length))
+                String model = "0";
+                int chainEnd = parts.length;
+                if (parts.length >= 3 && parts[parts.length - 1].matches("\\d+")) {
+                    model = parts[parts.length - 1];
+                    chainEnd--;
+                }
+                String chain = chainEnd > 1
+                        ? String.join("_", java.util.Arrays.copyOfRange(parts, 1, chainEnd))
                         : "";
 
                 result.add(new StructureInfo(
                         moleculeId,
                         chain,
+                        model,
                         preprocessedFolder.toString(),
                         StructureStatus.LOADED));
             }
         }
 
-        result.sort(Comparator.comparing(StructureInfo::getName).thenComparing(StructureInfo::getChain));
+        result.sort(Comparator.comparing(StructureInfo::getName)
+                .thenComparing(StructureInfo::getChain)
+                .thenComparing(StructureInfo::getModel));
         return result;
     }
 
     static void delete(Path preprocessedFolder, StructureInfo structure) throws IOException {
         Path normalizedFolder = preprocessedFolder.toAbsolutePath().normalize();
         String baseName = structure.getName() + "_" + structure.getChain();
-        Path pdbFile = normalizedFolder.resolve(baseName + ".pdb").normalize();
-        Path cifFile = normalizedFolder.resolve(baseName + ".cif").normalize();
+        String modelBaseName = baseName + "_" + structure.getModel();
+        Path pdbFile = normalizedFolder.resolve(modelBaseName + ".pdb").normalize();
+        Path cifFile = normalizedFolder.resolve(modelBaseName + ".cif").normalize();
 
         if (!normalizedFolder.equals(pdbFile.getParent()) || !normalizedFolder.equals(cifFile.getParent())) {
             throw new IOException("Invalid preprocessed structure path: " + baseName);
@@ -57,5 +66,7 @@ final class PreprocessedStructureStore {
 
         Files.deleteIfExists(pdbFile);
         Files.deleteIfExists(cifFile);
+        Files.deleteIfExists(normalizedFolder.resolve(baseName + ".pdb").normalize());
+        Files.deleteIfExists(normalizedFolder.resolve(baseName + ".cif").normalize());
     }
 }

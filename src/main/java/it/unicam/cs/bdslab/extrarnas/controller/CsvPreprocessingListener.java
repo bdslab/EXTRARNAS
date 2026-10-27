@@ -12,7 +12,8 @@ public interface CsvPreprocessingListener {
 
     CsvPreprocessingListener NONE = new CsvPreprocessingListener() {
         @Override
-        public void onRowStarted(String pdbId, String chainFilter, int rowNumber, int totalRows) {
+        public void onRowStarted(String pdbId, String chainFilter, String modelFilter,
+                                 int rowNumber, int totalRows) {
         }
 
         @Override
@@ -21,7 +22,8 @@ public interface CsvPreprocessingListener {
         }
     };
 
-    void onRowStarted(String pdbId, String chainFilter, int rowNumber, int totalRows);
+    void onRowStarted(String pdbId, String chainFilter, String modelFilter,
+                      int rowNumber, int totalRows);
 
     void onRowCompleted(CsvRowResult result, int completedRows, int totalRows,
                         List<StructureInfo> workspaceStructures);

@@ -52,6 +52,23 @@ class PreprocessedStructureStoreTest {
     }
 
     @Test
+    void readsAndDeletesModelAwareFilenames() throws Exception {
+        Files.writeString(tempDir.resolve("4V3P_L3_2.pdb"), "PDB");
+        Files.writeString(tempDir.resolve("4V3P_L3_2.cif"), "CIF");
+
+        List<StructureInfo> structures = PreprocessedStructureStore.list(tempDir);
+
+        assertEquals(1, structures.size());
+        assertEquals("4V3P", structures.get(0).getName());
+        assertEquals("L3", structures.get(0).getChain());
+        assertEquals("2", structures.get(0).getModel());
+
+        PreprocessedStructureStore.delete(tempDir, structures.get(0));
+        assertFalse(Files.exists(tempDir.resolve("4V3P_L3_2.pdb")));
+        assertFalse(Files.exists(tempDir.resolve("4V3P_L3_2.cif")));
+    }
+
+    @Test
     void rejectsPathsOutsideThePreprocessedFolder() {
         StructureInfo invalid = new StructureInfo("../outside", "chain", tempDir.toString());
 

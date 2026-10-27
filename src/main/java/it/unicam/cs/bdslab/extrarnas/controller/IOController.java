@@ -40,7 +40,8 @@ public class IOController {
     }
 
     /**
-     * Loads molecules from a CSV file where col0 is the molecule ID and col1 is an auth chain filter.
+     * Loads molecules from a CSV file where col0 is the molecule ID, col1 is an auth chain
+     * filter and col2 is a model filter. The model filter defaults to model 0 for legacy CSVs.
      */
     public List<StructureInfo> loadMoleculesFromCsv(Path csvPath) throws IOException {
         if (csvPath == null || !Files.isRegularFile(csvPath)) {
@@ -67,11 +68,13 @@ public class IOController {
 
                 String moleculeId = cols[0].trim();
                 String chain = cols[1].trim();
+                String model = cols.length >= 3 && !cols[2].trim().isEmpty() ? cols[2].trim() : "0";
                 if (moleculeId.isEmpty() || chain.isEmpty()) continue;
 
-                String dedupKey = moleculeId + "|" + chain;
+                String dedupKey = moleculeId + "|" + chain + "|" + model;
                 if (seenRows.add(dedupKey)) {
-                    result.add(new StructureInfo(moleculeId, chain, csvPath.toString(), StructureStatus.LOADED));
+                    result.add(new StructureInfo(moleculeId, chain, model, csvPath.toString(),
+                            StructureStatus.LOADED));
                 }
             }
         }
@@ -81,7 +84,7 @@ public class IOController {
 
     private boolean looksLikeHeader(String line) {
         String lower = line.toLowerCase();
-        return lower.contains("id") || lower.contains("chain");
+        return lower.contains("id") || lower.contains("chain") || lower.contains("model");
     }
 
     /**

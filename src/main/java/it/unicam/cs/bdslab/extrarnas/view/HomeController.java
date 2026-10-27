@@ -71,6 +71,8 @@ public class HomeController {
     @FXML
     private TableColumn<StructureInfo, String> chainColumn;
     @FXML
+    private TableColumn<StructureInfo, String> modelColumn;
+    @FXML
     private TableColumn<StructureInfo, Void> deleteColumn;
     @FXML
     private TableColumn<StructureInfo, String> statusColumn;
@@ -156,6 +158,7 @@ public class HomeController {
         nameColumn.setCellValueFactory(c -> new ReadOnlyStringWrapper(c.getValue().getName()));
 
         chainColumn.setCellValueFactory(x -> new ReadOnlyStringWrapper(x.getValue().getChain()));
+        modelColumn.setCellValueFactory(x -> new ReadOnlyStringWrapper(x.getValue().getModel()));
 
         statusColumn.setCellValueFactory(x -> new ReadOnlyStringWrapper(x.getValue().getStatus().translate()));
         errorColumn.setCellValueFactory(x -> new ReadOnlyStringWrapper(x.getValue().getError()));
@@ -241,24 +244,22 @@ public class HomeController {
     private void markStructuresAsQueued(List<StructureInfo> requestedStructures, Path csvPath) {
         for (StructureInfo requested : requestedStructures) {
             for (String chain : expandChainFilter(requested.getChain())) {
-                upsertStructure(new StructureInfo(
-                        requested.getName(),
-                        chain,
-                        csvPath.toString(),
-                        StructureStatus.QUEUED));
+                for (String model : expandModelFilter(requested.getModel())) {
+                    upsertStructure(new StructureInfo(requested.getName(), chain, model,
+                            csvPath.toString(), StructureStatus.QUEUED));
+                }
             }
         }
         sortStructures();
         filesTable.refresh();
     }
 
-    private void markRowAsProcessing(String pdbId, String chainFilter, Path csvPath) {
+    private void markRowAsProcessing(String pdbId, String chainFilter, String modelFilter, Path csvPath) {
         for (String chain : expandChainFilter(chainFilter)) {
-            upsertStructure(new StructureInfo(
-                    pdbId,
-                    chain,
-                    csvPath.toString(),
-                    StructureStatus.PROCESSING));
+            for (String model : expandModelFilter(modelFilter)) {
+                upsertStructure(new StructureInfo(pdbId, chain, model, csvPath.toString(),
+                        StructureStatus.PROCESSING));
+            }
         }
         sortStructures();
         filesTable.refresh();
@@ -267,9 +268,12 @@ public class HomeController {
     private void applyRowCompletion(CsvRowResult rowResult, List<StructureInfo> workspaceStructures,
                                     Path csvPath) {
         Set<String> rowKeys = expandChainFilter(rowResult.chainFilter()).stream()
-                .map(chain -> structureKey(rowResult.pdbId(), chain))
+                .map(chain -> rowResult.pdbId().toUpperCase(Locale.ROOT) + "|" + chain)
                 .collect(Collectors.toSet());
-        structures.removeIf(structure -> rowKeys.contains(structureKey(structure.getName(), structure.getChain()))
+        Set<String> requestedModels = new HashSet<>(expandModelFilter(rowResult.modelFilter()));
+        structures.removeIf(structure -> rowKeys.contains(structure.getName().toUpperCase(Locale.ROOT)
+                        + "|" + structure.getChain())
+                && (requestedModels.contains("*") || requestedModels.contains(structure.getModel()))
                 && (structure.getStatus() == StructureStatus.QUEUED
                 || structure.getStatus() == StructureStatus.PROCESSING));
 
@@ -279,12 +283,10 @@ public class HomeController {
 
         if (!rowResult.successful()) {
             for (String chain : expandChainFilter(rowResult.chainFilter())) {
-                upsertStructure(new StructureInfo(
-                        rowResult.pdbId(),
-                        chain,
-                        csvPath.toString(),
-                        StructureStatus.ERROR,
-                        rowResult.error()));
+                for (String model : expandModelFilter(rowResult.modelFilter())) {
+                    upsertStructure(new StructureInfo(rowResult.pdbId(), chain, model,
+                            csvPath.toString(), StructureStatus.ERROR, rowResult.error()));
+                }
             }
         }
 
@@ -308,18 +310,16 @@ public class HomeController {
     private void markStructuresAsFailed(List<StructureInfo> requestedStructures, Path csvPath, String error) {
         for (StructureInfo requested : requestedStructures) {
             for (String chain : expandChainFilter(requested.getChain())) {
-                StructureInfo current = findStructure(requested.getName(), chain);
+                for (String model : expandModelFilter(requested.getModel())) {
+                    StructureInfo current = findStructure(requested.getName(), chain, model);
                 if (current != null
                         && current.getStatus() != StructureStatus.QUEUED
                         && current.getStatus() != StructureStatus.PROCESSING) {
                     continue;
                 }
-                upsertStructure(new StructureInfo(
-                        requested.getName(),
-                        chain,
-                        csvPath.toString(),
-                        StructureStatus.ERROR,
-                        error));
+                    upsertStructure(new StructureInfo(requested.getName(), chain, model,
+                            csvPath.toString(), StructureStatus.ERROR, error));
+                }
             }
         }
         sortStructures();
@@ -329,7 +329,7 @@ public class HomeController {
     private void applyPreprocessingResult(CsvPreprocessingResult result) {
         Map<String, StructureInfo> merged = new LinkedHashMap<>();
         for (StructureInfo structure : result.workspaceStructures()) {
-            merged.put(structureKey(structure.getName(), structure.getChain()), structure);
+            merged.put(structureKey(structure.getName(), structure.getChain(), structure.getModel()), structure);
         }
 
         long failedRows = 0;
@@ -339,13 +339,12 @@ public class HomeController {
             }
             failedRows++;
             for (String chain : expandChainFilter(rowResult.chainFilter())) {
-                StructureInfo failedStructure = new StructureInfo(
-                        rowResult.pdbId(),
-                        chain,
-                        ioController.getSharedDirectory().resolve("preprocessed").toString(),
-                        StructureStatus.ERROR,
-                        rowResult.error());
-                merged.put(structureKey(rowResult.pdbId(), chain), failedStructure);
+                for (String model : expandModelFilter(rowResult.modelFilter())) {
+                    StructureInfo failedStructure = new StructureInfo(rowResult.pdbId(), chain, model,
+                            ioController.getSharedDirectory().resolve("preprocessed").toString(),
+                            StructureStatus.ERROR, rowResult.error());
+                    merged.put(structureKey(rowResult.pdbId(), chain, model), failedStructure);
+                }
             }
         }
 
@@ -357,10 +356,10 @@ public class HomeController {
     }
 
     private void upsertStructure(StructureInfo updated) {
-        String key = structureKey(updated.getName(), updated.getChain());
+        String key = structureKey(updated.getName(), updated.getChain(), updated.getModel());
         for (int index = 0; index < structures.size(); index++) {
             StructureInfo current = structures.get(index);
-            if (structureKey(current.getName(), current.getChain()).equals(key)) {
+            if (structureKey(current.getName(), current.getChain(), current.getModel()).equals(key)) {
                 structures.set(index, updated);
                 return;
             }
@@ -368,10 +367,11 @@ public class HomeController {
         structures.add(updated);
     }
 
-    private StructureInfo findStructure(String pdbId, String chain) {
-        String key = structureKey(pdbId, chain);
+    private StructureInfo findStructure(String pdbId, String chain, String model) {
+        String key = structureKey(pdbId, chain, model);
         return structures.stream()
-                .filter(structure -> structureKey(structure.getName(), structure.getChain()).equals(key))
+                .filter(structure -> structureKey(structure.getName(), structure.getChain(),
+                        structure.getModel()).equals(key))
                 .findFirst()
                 .orElse(null);
     }
@@ -387,13 +387,25 @@ public class HomeController {
                 .toList();
     }
 
-    private String structureKey(String pdbId, String chain) {
-        return pdbId.toUpperCase(Locale.ROOT) + "|" + chain;
+    private List<String> expandModelFilter(String modelFilter) {
+        if (modelFilter == null || modelFilter.isBlank() || modelFilter.equals("*")) {
+            return List.of(modelFilter == null || modelFilter.isBlank() ? "0" : modelFilter);
+        }
+        return Arrays.stream(modelFilter.split(";"))
+                .map(String::trim)
+                .filter(model -> !model.isEmpty())
+                .distinct()
+                .toList();
+    }
+
+    private String structureKey(String pdbId, String chain, String model) {
+        return pdbId.toUpperCase(Locale.ROOT) + "|" + chain + "|" + model;
     }
 
     private void sortStructures() {
         structures.sort(Comparator.comparing(StructureInfo::getName, String.CASE_INSENSITIVE_ORDER)
-                .thenComparing(StructureInfo::getChain));
+                .thenComparing(StructureInfo::getChain)
+                .thenComparing(StructureInfo::getModel));
     }
 
     private void deleteStructure(StructureInfo structure) {
@@ -503,12 +515,13 @@ public class HomeController {
                 protected CsvPreprocessingResult call() throws Exception {
                     CsvPreprocessingListener listener = new CsvPreprocessingListener() {
                         @Override
-                        public void onRowStarted(String pdbId, String chainFilter,
+                        public void onRowStarted(String pdbId, String chainFilter, String modelFilter,
                                                  int rowNumber, int totalRows) {
                             Platform.runLater(() -> {
-                                markRowAsProcessing(pdbId, chainFilter, csvPath);
+                                markRowAsProcessing(pdbId, chainFilter, modelFilter, csvPath);
                                 preprocessingStatusLabel.setText("Preprocessing " + rowNumber + " of "
-                                        + totalRows + ": " + pdbId + ", auth chain " + chainFilter);
+                                        + totalRows + ": " + pdbId + ", auth chain " + chainFilter
+                                        + ", model " + modelFilter);
                                 preprocessingProgressBar.setProgress((double) (rowNumber - 1) / totalRows);
                             });
                         }
@@ -522,6 +535,7 @@ public class HomeController {
                                 preprocessingStatusLabel.setText("Preprocessed " + completedRows + " of "
                                         + totalRows + ": " + result.pdbId() + ", auth chain "
                                         + result.chainFilter() + " — "
+                                        + "model " + result.modelFilter() + " — "
                                         + (result.successful() ? "loaded" : "error"));
                             });
                         }

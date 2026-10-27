@@ -6,17 +6,29 @@ package it.unicam.cs.bdslab.extrarnas.models;
 public class StructureInfo {
     public String name;
     public String chain;
+    public String model;
     public String location;
     public StructureStatus status;
     public String error;
 
     public StructureInfo(String name, String chain, String location, StructureStatus status) {
-        this(name, chain, location, status, "");
+        this(name, chain, "0", location, status, "");
     }
 
     public StructureInfo(String name, String chain, String location, StructureStatus status, String error) {
+        this(name, chain, "0", location, status, error);
+    }
+
+    public StructureInfo(String name, String chain, String model, String location,
+                         StructureStatus status) {
+        this(name, chain, model, location, status, "");
+    }
+
+    public StructureInfo(String name, String chain, String model, String location,
+                         StructureStatus status, String error) {
         this.name = name;
         this.chain = chain;
+        this.model = model == null ? "" : model;
         this.location = location;
         this.status = status;
         this.error = error == null ? "" : error;
@@ -32,6 +44,10 @@ public class StructureInfo {
 
     public String getChain() {
         return chain;
+    }
+
+    public String getModel() {
+        return model;
     }
 
     public String getLocation() {

@@ -126,8 +126,8 @@ public class DockerController {
 
     /**
      * Reads the single CSV and processes potentially many PDB rows.
-     * CSV: col0 = PDB ID, col1 = auth chain filter (e.g., "A;B").
-     * Output: one PDB and one mmCIF file per retained auth chain under /data/preprocessed.
+     * CSV: col0 = PDB ID, col1 = auth chain filter (e.g., "A;B"), col2 = model filter
+     * (e.g., "0;1" or "*"). Output: one PDB and one mmCIF file per retained model and chain.
      */
     private List<CsvRowResult> processCsvAndFilterPdbs(Path csvFile,
                                                        CsvPreprocessingListener listener) throws IOException {
@@ -143,8 +143,10 @@ public class DockerController {
             CsvInputRow inputRow = inputRows.get(rowIndex);
             String pdbID = inputRow.pdbId();
             String chain = inputRow.chainFilter();
-            listener.onRowStarted(pdbID, chain, rowIndex + 1, totalRows);
-            logger.info("Processing structure " + pdbID + " with requested auth chain filter: " + chain);
+            String model = inputRow.modelFilter();
+            listener.onRowStarted(pdbID, chain, model, rowIndex + 1, totalRows);
+            logger.info("Processing structure " + pdbID + " with requested auth chain filter: "
+                    + chain + " and model filter: " + model);
 
             // Host path for reading (bind of /data)
             Path fileToFilter = sharedFolder.resolve(pdbID + ".pdb");
@@ -164,7 +166,7 @@ public class DockerController {
                     logger.log(Level.SEVERE, "Download or BeEM conversion failed for " + pdbID
                             + " (auth chain filter " + chain + ")", e);
                     failed.add(pdbID + "," + chain + " -> download/beem: " + e.getMessage());
-                    CsvRowResult result = CsvRowResult.failure(pdbID, chain, e.getMessage());
+                    CsvRowResult result = CsvRowResult.failure(pdbID, chain, model, e.getMessage());
                     rowResults.add(result);
                     notifyRowCompleted(listener, result, rowIndex + 1, totalRows);
                     continue;
@@ -173,18 +175,18 @@ public class DockerController {
             // preprocessing
             try {
                 if (isPDB) {
-                    filterPDB(chain, pdbID, preprocessedFolder, fileToFilter);
+                    filterPDB(chain, model, pdbID, preprocessedFolder, fileToFilter);
                 } else {
-                    filterCIF(chain, pdbID, preprocessedFolder);
+                    filterCIF(chain, model, pdbID, preprocessedFolder);
                 }
                 ok++;
-                CsvRowResult result = CsvRowResult.success(pdbID, chain);
+                CsvRowResult result = CsvRowResult.success(pdbID, chain, model);
                 rowResults.add(result);
                 notifyRowCompleted(listener, result, rowIndex + 1, totalRows);
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "Failed processing CSV row '" + inputRow.sourceLine() + "'", e);
                 failed.add(pdbID + "," + chain + " -> " + e.getMessage());
-                CsvRowResult result = CsvRowResult.failure(pdbID, chain, e.getMessage());
+                CsvRowResult result = CsvRowResult.failure(pdbID, chain, model, e.getMessage());
                 rowResults.add(result);
                 notifyRowCompleted(listener, result, rowIndex + 1, totalRows);
             }
@@ -219,7 +221,8 @@ public class DockerController {
                     logger.severe("Skipping invalid CSV row: " + line);
                     continue;
                 }
-                rows.add(new CsvInputRow(cols[0].trim(), cols[1].trim(), line));
+                String model = cols.length >= 3 && !cols[2].isBlank() ? cols[2].trim() : "0";
+                rows.add(new CsvInputRow(cols[0].trim(), cols[1].trim(), model, line));
             }
         }
         return rows;
@@ -232,13 +235,14 @@ public class DockerController {
             workspaceStructures = listPreprocessedStructures(sharedFolder);
         } catch (IOException e) {
             logger.log(Level.WARNING, "Could not refresh the preprocessed workspace after "
-                    + result.pdbId() + " auth chain filter " + result.chainFilter(), e);
+                    + result.pdbId() + " auth chain filter " + result.chainFilter()
+                    + " model filter " + result.modelFilter(), e);
             workspaceStructures = List.of();
         }
         listener.onRowCompleted(result, completedRows, totalRows, workspaceStructures);
     }
 
-    private record CsvInputRow(String pdbId, String chainFilter, String sourceLine) {
+    private record CsvInputRow(String pdbId, String chainFilter, String modelFilter, String sourceLine) {
     }
 
     private static String[] parseRow(String line) {
@@ -248,7 +252,7 @@ public class DockerController {
 
     private static boolean looksLikeHeader(String line) {
         String lower = line.toLowerCase(Locale.ROOT);
-        return lower.contains("id") || lower.contains("chain");
+        return lower.contains("id") || lower.contains("chain") || lower.contains("model");
     }
 
     public CsvPreprocessingResult preprocessCsvAndCollectStructures(Path sharedFolder, Path csvFile) throws IOException {
@@ -596,12 +600,10 @@ public class DockerController {
         return instance;
     }
 
-    private void filterPDB(String chain, String pdbID, Path preprocessedFolder, Path src) throws Exception {
+    private void filterPDB(String chain, String model, String pdbID, Path preprocessedFolder, Path src) throws Exception {
         logger.info("Filtering local PDB structure " + pdbID + " from " + src
                 + " using auth chain filter " + chain);
-        var filteredFiles = chain.equals("*")
-                ? bioJavaController.filterByStar(src)
-                : bioJavaController.filterById(src, chain);
+        var filteredFiles = bioJavaController.filterByModelAndChain(src, chain, model);
 
         if (filteredFiles.isEmpty()) {
             throw new IOException("No RNA chains matched auth chain filter " + chain
@@ -609,13 +611,13 @@ public class DockerController {
         }
 
         for (var f : filteredFiles) {
-            save(f, preprocessedFolder, pdbID);
+            save(f.structure(), preprocessedFolder, pdbID, f.model());
         }
         logger.info("Completed PDB filtering for " + pdbID + "; saved "
                 + filteredFiles.size() + " RNA chains");
     }
 
-    private void filterCIF(String chain, String pdbID, Path preprocessedFolder) throws Exception {
+    private void filterCIF(String chain, String model, String pdbID, Path preprocessedFolder) throws Exception {
         var mapping = sharedFolder.resolve("mappings").resolve(pdbID + "-pdb-mapping.csv");
         var bundles = sharedFolder.resolve("bundles");
 
@@ -672,11 +674,12 @@ public class DockerController {
             logger.info("Filtering BeEM bundle " + bundle + " for " + pdbID
                     + " with auth->bundle chain mappings: " + selectedDescription);
 
-            var filteredFiles = bioJavaController.filterById(bundlePath, newChains);
+            var filteredFiles = bioJavaController.filterByModelAndChain(bundlePath, newChains, model);
             logger.info("BioJava retained " + filteredFiles.size() + " RNA chains from bundle "
                     + bundle + " for " + pdbID);
 
-            for (var structure : filteredFiles) {
+            for (var filtered : filteredFiles) {
+                var structure = filtered.structure();
                 var filteredChain = structure.getChains().get(0);
                 String newChainId = filteredChain.getName();
                 String originalAuthChain = originalChainByNewChain.get(newChainId);
@@ -690,7 +693,8 @@ public class DockerController {
                             + ", id=" + filteredChain.getId());
                 }
 
-                save(structure, preprocessedFolder, pdbID, originalAuthChain, newChainId, bundle);
+                save(structure, preprocessedFolder, pdbID, originalAuthChain, newChainId, bundle,
+                        filtered.model());
                 savedAuthChains.add(originalAuthChain);
             }
         }
@@ -729,24 +733,22 @@ public class DockerController {
         return requestedAuthChains;
     }
 
-    private void save(Structure f, Path preprocessedFolder, String pdbID) throws Exception {
+    private void save(Structure f, Path preprocessedFolder, String pdbID, int model) throws Exception {
         // A legacy PDB chain corresponds to the auth chain used in the CSV input.
         var chain = f.getChains().get(0);
         var chainId = chain.getName() == null || chain.getName().isBlank()
                 ? chain.getId()
                 : chain.getName();
-        var dst = preprocessedFolder.resolve(pdbID
-                + "_"
-                + chainId);
+        var dst = preprocessedFolder.resolve(pdbID + "_" + chainId + "_" + model);
         bioJavaController.save(f, dst);
         logger.info("Saved filtered RNA structure for " + pdbID + ": auth chain " + chainId
                 + ", source PDB " + pdbID + ", output base path " + dst);
     }
 
     private void save(Structure structure, Path preprocessedFolder, String pdbID,
-                      String originalAuthChain, String bundleChain, String bundleFile) throws Exception {
+                      String originalAuthChain, String bundleChain, String bundleFile, int model) throws Exception {
         // Keep the BeEM one-character chain inside the PDB, but use the original auth chain in the output name.
-        var dst = preprocessedFolder.resolve(pdbID + "_" + originalAuthChain);
+        var dst = preprocessedFolder.resolve(pdbID + "_" + originalAuthChain + "_" + model);
         bioJavaController.save(structure, dst);
         logger.info("Saved filtered RNA structure for " + pdbID + ": auth chain " + originalAuthChain
                 + ", bundle chain " + bundleChain + ", source bundle " + bundleFile

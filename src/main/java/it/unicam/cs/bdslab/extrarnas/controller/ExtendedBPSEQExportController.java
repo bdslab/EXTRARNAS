@@ -99,12 +99,15 @@ public class ExtendedBPSEQExportController {
 
     private BioJavaController.FullChainSequence loadFullChainSequence(
             Path sharedDirectory, String baseName) throws IOException {
-        int separator = baseName.indexOf('_');
-        if (separator < 1 || separator == baseName.length() - 1) {
+        String[] parts = baseName.split("_", -1);
+        if (parts.length < 2 || parts[0].isBlank() || parts[1].isBlank()) {
             throw new IOException("Cannot determine chain from tool output name: " + baseName);
         }
-        String pdbId = baseName.substring(0, separator);
-        String chainId = baseName.substring(separator + 1);
+        String pdbId = parts[0];
+        String chainId = parts[1];
+        if (parts.length >= 3 && parts[parts.length - 1].matches("\\d+")) {
+            chainId = String.join("_", Arrays.copyOfRange(parts, 1, parts.length - 1));
+        }
         Path cifPath = sharedDirectory.resolve(pdbId + ".cif");
         if (!Files.isRegularFile(cifPath)) {
             throw new IOException("Original CIF is required but missing: " + cifPath);
@@ -234,20 +237,26 @@ public class ExtendedBPSEQExportController {
     private String baseNameFor(TOOL tool, Path file) {
         String name = file.getFileName().toString();
 
-        return Arrays.stream((switch (tool) {
+        String cleaned = switch (tool) {
             case RNAVIEW -> stripSuffixes(name, ".pdb.out", ".out");
             case RNAPOLIS_ANNOTATOR -> stripSuffixes(name, ".3db");
             case BARNABA -> stripSuffixes(name, ".pdb.ANNOTATE.pairing.out", ".pdb.ANNOTATE.stacking.out", ".out", ".cif.ANNOTATE.pairing.out");
             case BPNET -> {
-                String cleaned = stripSuffixes(name, ".out");
-                int split = cleaned.indexOf('.');
-                yield split > 0 ? cleaned.substring(0, split) : cleaned;
+                String bpnetName = stripSuffixes(name, ".out");
+                int split = bpnetName.indexOf('.');
+                yield split > 0 ? bpnetName.substring(0, split) : bpnetName;
             }
             case FR3D -> stripSuffixes(name, "_basepair.json", ".json");
             case X3DNA -> stripSuffixes(name, "_dssr.json", ".json");
             case MC_ANNOTATE -> stripSuffixes(name, ".txt");
-        }).split("_"))
-                .limit(2)
+        };
+        String[] parts = cleaned.split("_", -1);
+        int partCount = parts.length >= 3 && parts[parts.length - 1].matches("\\d+") ? 3 : 2;
+        if (parts.length < partCount) {
+            return cleaned.toUpperCase(Locale.ROOT);
+        }
+        return Arrays.stream(parts)
+                .limit(partCount)
                 .collect(Collectors.joining("_"))
                 .toUpperCase(Locale.ROOT);
     }
