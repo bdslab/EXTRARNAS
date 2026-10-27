@@ -35,7 +35,7 @@
          <bottom>
             <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
                <bottom>
-                  <VBox alignment="CENTER" spacing="8.0" BorderPane.alignment="CENTER">
+                  <VBox alignment="CENTER" maxHeight="-Infinity" prefHeight="296.0" prefWidth="1274.0" spacing="8.0" BorderPane.alignment="TOP_CENTER">
                      <children>
                         <VBox fx:id="preprocessingPanel" managed="false" maxWidth="1172.0" prefWidth="1172.0" spacing="6.0" visible="false">
                            <children>
@@ -47,7 +47,7 @@
                               <ProgressBar fx:id="preprocessingProgressBar" maxWidth="1.7976931348623157E308" prefWidth="1172.0" progress="0.0" />
                            </children>
                         </VBox>
-                      <TableView fx:id="filesTable" maxWidth="1172.0" minWidth="1100.0" prefHeight="241.0" prefWidth="1172.0" styleClass="table">
+                      <TableView fx:id="filesTable" maxHeight="-Infinity" maxWidth="1172.0" minWidth="1100.0" prefHeight="256.0" prefWidth="1172.0" styleClass="table">
                           <columns>
                               <TableColumn fx:id="nameColumn" maxWidth="160.0" minWidth="160.0" prefWidth="160.0" resizable="false" styleClass="column" text="Name" />
                               <TableColumn fx:id="chainColumn" maxWidth="90.0" minWidth="90.0" prefWidth="90.0" resizable="false" styleClass="column" text="Chain" />
@@ -59,7 +59,7 @@
                       </TableView>
                      </children>
                      <BorderPane.margin>
-                        <Insets left="50.0" right="50.0" top="10.0" />
+                        <Insets left="50.0" right="50.0" />
                      </BorderPane.margin>
                   </VBox>
                </bottom>
@@ -98,7 +98,7 @@
         </BorderPane>
     </top>
    <bottom>
-        <BorderPane fx:id="paneTranslationCleaning" prefHeight="160.0" prefWidth="1375.0" stylesheets="@../css/home.css" BorderPane.alignment="CENTER">
+        <BorderPane fx:id="paneTranslationCleaning" prefHeight="135.0" prefWidth="1375.0" stylesheets="@../css/home.css" BorderPane.alignment="CENTER">
             <left>
                 <BorderPane prefHeight="153.0" prefWidth="60.0" BorderPane.alignment="CENTER" />
             </left>
@@ -171,7 +171,7 @@
    <center>
         <BorderPane prefHeight="83.0" prefWidth="1375.0" BorderPane.alignment="CENTER">
          <top>
-                <ButtonBar prefHeight="60.0" prefWidth="1189.0" styleClass="buttons" BorderPane.alignment="CENTER">
+                <ButtonBar prefHeight="34.0" prefWidth="1189.0" styleClass="buttons" BorderPane.alignment="CENTER">
                <BorderPane.margin>
                   <Insets left="35.0" right="50.0" />
                </BorderPane.margin>
