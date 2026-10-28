@@ -109,8 +109,16 @@ public class ExtendedBPSEQExportController {
             chainId = String.join("_", Arrays.copyOfRange(parts, 1, parts.length - 1));
         }
         Path cifPath = sharedDirectory.resolve(pdbId + ".cif");
-        if (!Files.isRegularFile(cifPath)) {
-            throw new IOException("Original CIF is required but missing: " + cifPath);
+        // If the Cif file does not exist and there is no PDB file, we have an error.
+        // If the Cif file does not exist but there is a PDB file, we have a manual PDB
+        if (!Files.isRegularFile(cifPath) && !Files.exists(sharedDirectory.resolve(pdbId + ".pdb"))) {
+            throw new IOException("Cannot find CIF file for " + pdbId + " in " + sharedDirectory);
+        } else {
+            if (!Files.isRegularFile(cifPath)) {
+                logger.warning("CIF file for " + pdbId + " does not exist in " + sharedDirectory
+                        + ", but a PDB file exists. Using PDB file instead.");
+                cifPath = sharedDirectory.resolve(pdbId + ".pdb");
+            }
         }
         return BioJavaController.getInstance().readFullChainSequence(cifPath, chainId);
     }

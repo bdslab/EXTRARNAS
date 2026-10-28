@@ -17,6 +17,7 @@ import java.net.URI;
 import java.net.URL;
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class BioJavaController {
 
@@ -180,13 +181,19 @@ public class BioJavaController {
         return normalized;
     }
 
-    public FullChainSequence readFullChainSequence(Path cifPath, String chainId)
+    public FullChainSequence readFullChainSequence(Path path, String chainId)
             throws IOException {
-        Structure structure = cifReader.getStructure(cifPath.toFile());
+
+        if (path.toString().toLowerCase().endsWith(".pdb")) {
+            return readFullChainSequenceManualPDB(path, chainId);
+        }
+
+        Structure structure = cifReader.getStructure(path.toFile());
+
         for (Chain chain : structure.getChains()) {
             if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
                 List<Group> groups = chain.getSeqResGroups().stream()
-                        .filter(group -> group.getType() == GroupType.NUCLEOTIDE)
+                        .filter(group -> group.isNucleotide() || group.getPDBName().equals("GTP"))
                         .toList();
                 StringBuilder sequence = new StringBuilder(groups.size());
                 List<Boolean> modelled = new ArrayList<>(groups.size());
@@ -197,7 +204,39 @@ public class BioJavaController {
                 return new FullChainSequence(sequence.toString(), modelled);
             }
         }
-        throw new IOException("Chain " + chainId + " was not found in " + cifPath);
+        throw new IOException("Chain " + chainId + " was not found in " + path);
+    }
+
+    private FullChainSequence readFullChainSequenceManualPDB(Path path, String chainId) throws IOException {
+        Structure structure = reader.getStructure(path.toFile());
+        for (Chain chain : structure.getChains()) {
+            if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
+                List<Group> groups = chain.getAtomGroups().stream()
+                        .filter(group -> group.isNucleotide() || group.getPDBName().equals("GTP"))
+                        .toList();
+                List<Character> sequence = new ArrayList<>(groups.size());
+                List<Boolean> modelled = new ArrayList<>(groups.size());
+                for (Group group : groups) {
+                    sequence.add(group.getPDBName().charAt(0)); // get 1-letter code
+                    modelled.add(group.has3D());
+                }
+                // find unmodelled by checking the residue numbers
+                var residues = groups.stream().map(Group::getResidueNumber).map(ResidueNumber::getSeqNum).toList();
+                for (int i = 0; i < residues.size(); i++) {
+                    int current = residues.get(i);
+                    int next = (i + 1 < residues.size()) ? residues.get(i + 1) : current + 1;
+                    for (int missing = current + 1; missing < next; missing++) {
+                        sequence.add(i + 1, 'N');
+                        modelled.add(i + 1, false);
+                    }
+                }
+                return new FullChainSequence(sequence.stream()
+                            .map(Object::toString)
+                            .collect(Collectors.joining())
+                        , modelled);
+            }
+        }
+        throw new IOException("Chain " + chainId + " was not found in " + path);
     }
 
     public record FullChainSequence(String sequence, List<Boolean> modelled) {
