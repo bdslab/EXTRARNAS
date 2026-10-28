@@ -154,7 +154,7 @@ public class BioJavaController {
         for (Chain chain : structure.getChains()) {
             if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
                 List<Group> groups = chain.getSeqResGroups().stream()
-                        .filter(group -> group.getType() == GroupType.NUCLEOTIDE)
+                        .filter(group -> group.isNucleotide() || group.getPDBName().equals("GTP"))
                         .toList();
                 StringBuilder sequence = new StringBuilder(groups.size());
                 List<Boolean> modelled = new ArrayList<>(groups.size());
