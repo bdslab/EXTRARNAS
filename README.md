@@ -137,6 +137,18 @@ mmCIF→PDB conversion for bundled PDB entries may fail in a small number of cas
 
 These issues are limited to a few legacy structures and do not affect the majority of RNA entries available from the Protein Data Bank.
 
+#### Non-standard nucleotides in local PDB files
+
+When processing user-provided structures in the legacy PDB format, EXTRARNAS cannot guarantee the correct recognition of all non-standard or chemically modified nucleotides.
+
+Nucleotide identification relies on BioJava's chemical component classification. Some components that are part of an RNA polymer may be classified as non-polymeric and therefore not recognized as nucleotides. For example, guanosine triphosphate (GTP) may be classified as NON-POLYMER, even when it represents the first residue of an RNA chain.
+
+Unlike mmCIF files, legacy PDB files may not provide sufficient information to reliably establish whether a non-standard component belongs to the RNA polymer, particularly when they are manually constructed and lack records such as SEQRES or MODRES.
+
+As a result, some non-standard nucleotides may be excluded from the reconstructed RNA sequence and subsequent structural annotations, potentially affecting sequence length, residue numbering, and extracted interactions.
+
+For reliable processing of RNA structures containing non-standard nucleotides, the mmCIF format is recommended. When using manually constructed PDB files, users should verify that all expected nucleotides are correctly recognized and included in the output.
+
 ## License
 
 Please refer to the `LICENSE` file in the repository for more details.
