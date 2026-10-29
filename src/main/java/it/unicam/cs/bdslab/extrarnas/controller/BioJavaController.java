@@ -160,9 +160,7 @@ public class BioJavaController {
 
         for (Chain chain : structure.getChains()) {
             if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
-                List<Group> groups = chain.getSeqResGroups().stream()
-                        .filter(group -> group.isNucleotide() || group.getPDBName().equals("GTP"))
-                        .toList();
+                List<Group> groups = chain.getSeqResGroups().stream().toList();
                 StringBuilder sequence = new StringBuilder(groups.size());
                 List<Boolean> modelled = new ArrayList<>(groups.size());
                 for (Group group : groups) {
@@ -180,7 +178,7 @@ public class BioJavaController {
         for (Chain chain : structure.getChains()) {
             if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
                 List<Group> groups = chain.getAtomGroups().stream()
-                        .filter(group -> group.isNucleotide() || group.getPDBName().equals("GTP"))
+                        .filter(group -> group.isNucleotide())
                         .toList();
                 List<Character> sequence = new ArrayList<>(groups.size());
                 List<Boolean> modelled = new ArrayList<>(groups.size());
