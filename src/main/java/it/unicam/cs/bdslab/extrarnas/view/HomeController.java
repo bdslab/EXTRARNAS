@@ -112,9 +112,6 @@ public class HomeController {
     private CheckBox ck_extractESS;
 
     @FXML
-    private CheckBox ck_consensus;
-
-    @FXML
     private ChoiceBox<RNASecondaryStructurePrinter.OutputFormat> select_outputSS;
 
     @FXML
@@ -205,9 +202,7 @@ public class HomeController {
 
         handleExtractSelected(ck_extractSS);
 
-        btn_addCsv.setOnAction((actionEvent) -> {
-            handleAddMoleculesList();
-        });
+        btn_addCsv.setOnAction((actionEvent) -> handleAddMoleculesList());
 
         select_outputSS.setItems(FXCollections.observableArrayList(
                 RNASecondaryStructurePrinter.OutputFormat.getNonExtendedFormats()));
@@ -447,13 +442,6 @@ public class HomeController {
     }
 
     @FXML
-    public void handleAddFile() {
-        logger.info("ADD FILE button clicked");
-
-        logger.info("Exit add file");
-    }
-
-    @FXML
     public void handleAddMoleculesList() {
         logger.info("ADD CSV MOLECULES LIST button clicked");
 
@@ -556,13 +544,7 @@ public class HomeController {
     }
 
     @FXML
-    public void handleReset() {
-        logger.info("RESET button clicked");
-        logger.info("Reset done");
-    }
-
-    @FXML
-    public void handleRun() throws InterruptedException, IOException {
+    public void handleRun() {
         logger.info("RUN button clicked");
         refreshToolListAvailability();
 
@@ -589,7 +571,7 @@ public class HomeController {
             return;
         }
 
-        this.executeCommand(new HashSet<>(selectedTools), true);
+        this.executeCommand(new HashSet<>(selectedTools));
     }
 
     private Stage getPrimaryStage() {
@@ -611,12 +593,10 @@ public class HomeController {
      * 1. Execute the selected tools (e.g., RNAPolis Annotator, RNAView...)
      * 2. Generate extended BPSEQ or normal BPSEQ files based on the output of the
      * tools and the user's choice.
-     * 
-     * @param selectedTools       the set of tools selected by the user to run
-     * @param outputExtendedBPSEQ if the output format should be extended BPSEQ
-     *                            (true) or normal BPSEQ (false)
+     *
+     * @param selectedTools the set of tools selected by the user to run
      */
-    private void executeCommand(Set<TOOL> selectedTools, boolean outputExtendedBPSEQ) {
+    private void executeCommand(Set<TOOL> selectedTools) {
 
         Alert loadingAlert = new Alert(Alert.AlertType.INFORMATION);
         loadingAlert.setTitle("Processing");
@@ -681,24 +661,24 @@ public class HomeController {
             loadingAlert.setResult(ButtonType.OK);
             loadingAlert.close();
 
-            javafx.application.Platform.runLater(() -> {
+            javafx.application.Platform.runLater(() ->
                 showAlert(
                         Alert.AlertType.INFORMATION,
                         "Process Completed",
                         "",
                         "Selected tools have been executed and output files are saved in: "
-                                + ioController.getSharedDirectory());
-            });
+                                + ioController.getSharedDirectory())
+            );
         });
 
         task.setOnFailed(e -> {
             loadingAlert.setResult(ButtonType.OK);
             loadingAlert.close();
             loadingAlert.close();
-            javafx.application.Platform.runLater(() -> {
+            javafx.application.Platform.runLater(() ->
                 showAlert(Alert.AlertType.ERROR, "Process Error", "",
-                    "An error occurred during execution: " + task.getException().getMessage());
-            });
+                    "An error occurred during execution: " + task.getException().getMessage())
+            );
         });
 
         loadingAlert.show();

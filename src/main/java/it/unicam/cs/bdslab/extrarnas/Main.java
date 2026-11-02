@@ -128,7 +128,6 @@ public class Main extends Application {
             Runnable onAllDone = () -> {
                 if (t1.isDone() && t2.isDone()) {
                     boolean ok1 = getSafe(t1, false);
-                    boolean ok2 = getSafe(t2, false);
                     title.setText(ok1 ? "Container stopped." : "Failed to stop container.");
                     done.set(true);
                     closeBtn.setDisable(false);
@@ -267,7 +266,7 @@ public class Main extends Application {
             stage = new Stage();
         }
         stage.setTitle("EXTRARNAS");
-        stage.getIcons().add(new Image(String.valueOf(App.class.getResource("/img/EXTRARNAS-logo.png").toURI())));
+        stage.getIcons().add(new Image(String.valueOf(Objects.requireNonNull(App.class.getResource("/img/EXTRARNAS-logo.png")).toURI())));
         stage.setScene(new Scene(root));
         return stage;
     }

@@ -14,13 +14,14 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class MCAnnotateTest {
     @Test
     public void testMCAnnotate() throws IOException, URISyntaxException {
-        File inputFile = new File(this.getClass().getResource("/MC_4PLX.txt").toURI());
+        File inputFile = new File(Objects.requireNonNull(this.getClass().getResource("/MC_4PLX.txt")).toURI());
         CharStream charStream = CharStreams.fromReader(new FileReader(inputFile));
         McAnnotateGrammarLexer lexer = new McAnnotateGrammarLexer(charStream);
         CommonTokenStream tokens = new CommonTokenStream(lexer);

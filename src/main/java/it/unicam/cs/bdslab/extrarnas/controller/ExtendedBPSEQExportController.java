@@ -114,10 +114,6 @@ public class ExtendedBPSEQExportController {
         return BioJavaController.getInstance().readFullChainSequence(cifPath, chainId);
     }
 
-    public Path getOutputDirectory(Path sharedDirectory) {
-        return sharedDirectory.resolve("output");
-    }
-
     public List<ExportItem> loadStructures(TOOL tool, Path sharedDirectory) throws IOException {
         return switch (tool) {
             case RNAVIEW -> parseRNAView(sharedDirectory.resolve("rnaview-output"));

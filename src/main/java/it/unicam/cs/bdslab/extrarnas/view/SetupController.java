@@ -150,13 +150,13 @@ public class SetupController {
             new Thread(taskBuildx, "setup-docker-buildx").start();
         });
 
-        taskBuild.setOnFailed(e -> {
+        taskBuild.setOnFailed(e ->
             Platform.runLater(() -> {
                 loadingStage.close();
                 String msg = taskBuild.getException() == null ? "Unknown error" : taskBuild.getException().getMessage();
                 showAlert(Alert.AlertType.ERROR, "Setup error", msg);
-            });
-        });
+            })
+        );
 
         
         taskBuildx.setOnSucceeded(e -> {
@@ -171,13 +171,13 @@ public class SetupController {
             });
         });
 
-        taskBuildx.setOnFailed(e -> {
+        taskBuildx.setOnFailed(e ->
             Platform.runLater(() -> {
                 loadingStage.close();
                 String msg = taskBuildx.getException() == null ? "Unknown error" : taskBuildx.getException().getMessage();
                 showAlert(Alert.AlertType.ERROR, "Setup error", msg);
-            });
-        });
+            })
+        );
 
         loadingStage.show();
         new Thread(taskBuild, "setup-docker-build").start();

@@ -99,7 +99,7 @@ public class RNASecondaryStructurePrinter {
     public String printExtendedBPSEQ(ExtendedRNASecondaryStructure structure) {
         String seq = this.getSequence(structure);
         Map<BondType, Map<Integer, List<Integer>>> partnerMap = this.buildPartnerMap(structure);
-        int[] colWidths = this.getColumnsFormat(structure, seq, partnerMap);
+        int[] colWidths = this.getColumnsFormat(seq, partnerMap);
 
         StringBuilder result = new StringBuilder();
 
@@ -143,21 +143,18 @@ public class RNASecondaryStructurePrinter {
     /**
      * Calculates the minimum required width for each column.
      *
-     * @param structure the RNA secondary structure
-     * @param seq the RNA sequence
+     * @param seq        the RNA sequence
      * @param partnerMap the partner map
      * @return array of 14 integers: column widths (index, nucleotide, 12 LW types)
      */
     private int[] getColumnsFormat(
-            ExtendedRNASecondaryStructure structure,
             String seq,
             Map<BondType, Map<Integer, List<Integer>>> partnerMap
     ) {
         int n = seq.length();
         // Initialize with minimum values
-        int[] colWidths = Arrays.asList(HEADERS)
-                .stream()
-                .mapToInt(s -> s.length())
+        int[] colWidths = Arrays.stream(HEADERS)
+                .mapToInt(String::length)
                 .toArray();
 
         // Iterate over all positions

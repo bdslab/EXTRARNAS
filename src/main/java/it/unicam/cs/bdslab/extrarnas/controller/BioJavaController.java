@@ -178,7 +178,7 @@ public class BioJavaController {
         for (Chain chain : structure.getChains()) {
             if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
                 List<Group> groups = chain.getAtomGroups().stream()
-                        .filter(group -> group.isNucleotide())
+                        .filter(Group::isNucleotide)
                         .toList();
                 List<Character> sequence = new ArrayList<>(groups.size());
                 List<Boolean> modelled = new ArrayList<>(groups.size());
@@ -228,18 +228,6 @@ public class BioJavaController {
             }
             throw new IllegalArgumentException("Compacted index outside modelled sequence: " + compactedIndex);
         }
-    }
-
-    public String getSequence(Structure structure) {
-        StringBuilder sequence = new StringBuilder();
-        for (Chain chain : structure.getChains()) {
-            for (Group group : chain.getAtomGroups()) {
-                if (group.getType().equals(GroupType.NUCLEOTIDE)) {
-                    sequence.append(StructureTools.get1LetterCode(group.getPDBName()));
-                }
-            }
-        }
-        return sequence.toString();
     }
 
     private Predicate<Chain> getFilter(String allowedIds) {

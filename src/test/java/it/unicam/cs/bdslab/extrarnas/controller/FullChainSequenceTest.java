@@ -7,7 +7,6 @@ import it.unicam.cs.bdslab.extrarnas.parser.models.ExtendedRNASecondaryStructure
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
