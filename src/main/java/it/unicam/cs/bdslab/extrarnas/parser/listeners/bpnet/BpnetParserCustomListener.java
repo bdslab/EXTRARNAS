@@ -128,8 +128,11 @@ public class BpnetParserCustomListener extends BpnetGrammarBaseListener {
         String edge1 = convertEdge(bond.substring(0, 1));
         String edge2 = convertEdge(bond.substring(2, 3));
         String orientation = bond.substring(3).toLowerCase();
-
-        return BondType.fromString(orientation + edge1 + edge2);
+        BondType bt = BondType.fromString(orientation + edge1 + edge2);
+        // Since BPNET returns for instance H:W on one side and W:H on the other we have to check the reverse
+        if (bt == BondType.UNKNOWN)
+            bt = BondType.fromString(orientation + edge2 + edge1);
+        return bt;
     }
 
     /**
