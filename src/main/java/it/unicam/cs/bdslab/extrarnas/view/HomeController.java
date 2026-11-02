@@ -1,7 +1,7 @@
 package it.unicam.cs.bdslab.extrarnas.view;
 
-import it.unicam.cs.bdslab.extrarnas.controller.DockerController;
 import it.unicam.cs.bdslab.extrarnas.controller.CsvPreprocessingListener;
+import it.unicam.cs.bdslab.extrarnas.controller.DockerController;
 import it.unicam.cs.bdslab.extrarnas.controller.ExtendedBPSEQExportController;
 import it.unicam.cs.bdslab.extrarnas.controller.IOController;
 import it.unicam.cs.bdslab.extrarnas.models.CsvPreprocessingResult;
@@ -10,14 +10,17 @@ import it.unicam.cs.bdslab.extrarnas.models.StructureInfo;
 import it.unicam.cs.bdslab.extrarnas.models.StructureStatus;
 import it.unicam.cs.bdslab.extrarnas.parser.output.RNASecondaryStructurePrinter;
 import it.unicam.cs.bdslab.extrarnas.view.utils.TOOL;
-import javafx.beans.property.*;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -26,24 +29,22 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import java.awt.Desktop;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Predicate;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-
-import javafx.stage.FileChooser;
-
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 import static it.unicam.cs.bdslab.extrarnas.view.utils.TOOL.*;
 

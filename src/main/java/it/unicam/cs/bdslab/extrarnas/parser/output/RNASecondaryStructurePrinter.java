@@ -16,12 +16,12 @@
 
 package it.unicam.cs.bdslab.extrarnas.parser.output;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
 import it.unicam.cs.bdslab.extrarnas.parser.models.BondType;
 import it.unicam.cs.bdslab.extrarnas.parser.models.ExtendedRNASecondaryStructure;
 import it.unicam.cs.bdslab.extrarnas.parser.models.Pair;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Exporter for converting an {@link ExtendedRNASecondaryStructure} into bpseq format.

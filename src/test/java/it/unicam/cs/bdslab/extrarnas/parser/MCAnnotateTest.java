@@ -1,6 +1,8 @@
 package it.unicam.cs.bdslab.extrarnas.parser;
 
-import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.*;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.McAnnotateCustomListener;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.McAnnotateGrammarLexer;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.McAnnotateGrammarParser;
 import it.unicam.cs.bdslab.extrarnas.parser.models.ExtendedRNASecondaryStructure;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -9,7 +11,6 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URISyntaxException;

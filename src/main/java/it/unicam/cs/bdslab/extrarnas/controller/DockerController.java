@@ -10,9 +10,9 @@ import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.command.ExecStartResultCallback;
 import com.github.dockerjava.transport.DockerHttpClient;
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
-import it.unicam.cs.bdslab.extrarnas.models.StructureInfo;
 import it.unicam.cs.bdslab.extrarnas.models.CsvPreprocessingResult;
 import it.unicam.cs.bdslab.extrarnas.models.CsvRowResult;
+import it.unicam.cs.bdslab.extrarnas.models.StructureInfo;
 import org.biojava.nbio.structure.Structure;
 
 import java.io.*;

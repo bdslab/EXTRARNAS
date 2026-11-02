@@ -3,12 +3,10 @@ package it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate;
 import it.unicam.cs.bdslab.extrarnas.parser.models.BondType;
 import it.unicam.cs.bdslab.extrarnas.parser.models.ExtendedRNASecondaryStructure;
 import it.unicam.cs.bdslab.extrarnas.parser.models.Pair;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.McAnnotateGrammarParser;
-import org.antlr.v4.runtime.tree.TerminalNode;
 
 /**
  * Custom ANTLR listener for parsing mc‑annotate output files.

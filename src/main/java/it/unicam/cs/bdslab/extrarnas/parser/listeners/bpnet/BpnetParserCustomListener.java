@@ -4,7 +4,8 @@ import it.unicam.cs.bdslab.extrarnas.parser.models.BondType;
 import it.unicam.cs.bdslab.extrarnas.parser.models.ExtendedRNASecondaryStructure;
 import it.unicam.cs.bdslab.extrarnas.parser.models.Pair;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Custom ANTLR listener for parsing bpnet output files.
