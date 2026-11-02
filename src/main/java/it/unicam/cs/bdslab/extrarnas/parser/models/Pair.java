@@ -8,7 +8,7 @@ public class Pair {
     
     private int pos1;
     private int pos2;
-    private BondType type;
+    private final BondType type;
     private String nucleotide1;
     private String nucleotide2;
 

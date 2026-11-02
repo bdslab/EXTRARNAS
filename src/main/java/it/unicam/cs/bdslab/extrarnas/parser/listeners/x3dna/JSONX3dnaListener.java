@@ -243,7 +243,7 @@ public class JSONX3dnaListener extends JSONBaseListener {
         }
 
         if (nucleotide != null && nucleotide.length() > 1) {
-            logger.warn("Nucleotide string '{}' has length >1 – truncating to first character (uncommon residue) '{}'.", nucleotide, nucleotide.substring(0, 1));
+            logger.warn("Nucleotide string '{}' has length >1 – truncating to first character (uncommon residue) '{}'.", nucleotide, nucleotide.charAt(0));
             nucleotide = nucleotide.substring(0, 1);
         }
 

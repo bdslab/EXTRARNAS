@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class MCAnnotateTest {
     @Test
-    public void testMCAnnotate() throws FileNotFoundException, IOException, URISyntaxException {
+    public void testMCAnnotate() throws IOException, URISyntaxException {
         File inputFile = new File(this.getClass().getResource("/MC_4PLX.txt").toURI());
         CharStream charStream = CharStreams.fromReader(new FileReader(inputFile));
         McAnnotateGrammarLexer lexer = new McAnnotateGrammarLexer(charStream);

@@ -46,12 +46,12 @@ class FullChainSequenceTest {
     }
 
     @Test 
-    void maps_4PLXC() throws Exception, Exception, URISyntaxException {
+    void maps_4PLXC() throws Exception {
         String pathTo4PLXC = this.getClass().getResource("/4PLX_C.3db").getPath();
         File file4plxcRnaPolis = new File(pathTo4PLXC);
         // download cif with Biojavacontroller
         BioJavaController bioJavaController = BioJavaController.getInstance();
-        Path downloadedPDB = bioJavaController.downloadPDB("4PLX", this.getClass().getResource("/out").toURI().getPath().toString().substring(1));
+        Path downloadedPDB = bioJavaController.downloadPDB("4PLX", this.getClass().getResource("/out").toURI().getPath().substring(1));
         // change .pdb to .cif
         Path downloadedCIF = Path.of(downloadedPDB.toString().replace(".pdb", ".cif"));
         BioJavaController.FullChainSequence sequence = bioJavaController.readFullChainSequence(downloadedCIF, "C");

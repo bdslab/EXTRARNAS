@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 public class JSONFr3dListener extends JSONBaseListener {
 
     /** Builder for the final RNA secondary structure. */
-    private ExtendedRNASecondaryStructure.Builder structureBuilder = new ExtendedRNASecondaryStructure.Builder();;
+    private ExtendedRNASecondaryStructure.Builder structureBuilder = new ExtendedRNASecondaryStructure.Builder();
 
     /** Builder for the current base pair being processed. */
     private Pair.Builder pairBuilder;

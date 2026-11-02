@@ -8,7 +8,7 @@ import java.util.function.IntUnaryOperator;
 
 public class ExtendedRNASecondaryStructure {
     private String sequence;
-    private List<Pair> pairs;
+    private final List<Pair> pairs;
     private List<Pair> canonical;
     private Map<String,String> headerInfo;
 
@@ -79,7 +79,7 @@ public class ExtendedRNASecondaryStructure {
         private String sequence = "";
         private List<Pair> pairs = new ArrayList<>();
         private List<Pair> canonical = new ArrayList<>();
-        private Map<String,String> headerInfo = new HashMap<>();
+        private final Map<String,String> headerInfo = new HashMap<>();
 
         public Builder setSequence(String sequence) {
             this.sequence = sequence;

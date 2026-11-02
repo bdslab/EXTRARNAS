@@ -119,7 +119,7 @@ public class HomeController {
     @FXML
     private ChoiceBox<RNASecondaryStructurePrinter.OutputFormat> select_outputESS;
     private boolean x3dnaAvailable = true;
-    private Map<TOOL, BooleanProperty> checkedItems = new HashMap<>();
+    private final Map<TOOL, BooleanProperty> checkedItems = new HashMap<>();
 
     private final ObservableList<StructureInfo> structures = FXCollections.observableArrayList();
     private boolean preprocessingActive;
@@ -704,7 +704,7 @@ public class HomeController {
         new Thread(task).start();
     }
 
-   private Map<TOOL, Runnable> actionsMap = Map.of(
+   private final Map<TOOL, Runnable> actionsMap = Map.of(
             RNAPOLIS_ANNOTATOR, () -> {
                 try {
                     this.dockerController.rnapolisAnnotator();
