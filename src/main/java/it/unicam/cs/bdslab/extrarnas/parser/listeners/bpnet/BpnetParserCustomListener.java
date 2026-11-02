@@ -26,7 +26,7 @@ import java.util.*;
 public class BpnetParserCustomListener extends BpnetGrammarBaseListener {
 
     /** Builder for the final RNA secondary structure. */
-    private ExtendedRNASecondaryStructure.Builder structureBuilder = new ExtendedRNASecondaryStructure.Builder();;
+    private ExtendedRNASecondaryStructure.Builder structureBuilder = new ExtendedRNASecondaryStructure.Builder();
 
     /** Set of pairs collected during parsing (using a Set to avoid duplicates). */
     private final Set<Pair> pairs = new HashSet<>();
