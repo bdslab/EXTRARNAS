@@ -98,13 +98,21 @@ public class BpnetParserCustomListener extends BpnetGrammarBaseListener {
      */
     @Override
     public void enterPair(BpnetGrammarParser.PairContext ctx) {
-        pairs.add(new Pair(
-                currentPosition - 1,
-                Integer.parseInt(ctx.INT().getFirst().getText()) - 1,
-                currentNucleotide,
-                ctx.TEXT().getFirst().getText(),
-                getType(ctx.BOND().getText()))
-        );
+        int pos1 = currentPosition - 1;
+        int pos2 = Integer.parseInt(ctx.INT().getFirst().getText()) - 1;
+        BondType bt = getType(ctx.BOND().getText());
+        if (pairs.stream().noneMatch(p ->
+                p.getPos1() == pos2
+             && p.getPos2() == pos1
+             && bt.equals(p.getType()))) {
+            pairs.add(new Pair(
+                    pos1,
+                    pos2,
+                    currentNucleotide,
+                    ctx.TEXT().getFirst().getText(),
+                    getType(ctx.BOND().getText()))
+            );
+        }
     }
 
     /**
