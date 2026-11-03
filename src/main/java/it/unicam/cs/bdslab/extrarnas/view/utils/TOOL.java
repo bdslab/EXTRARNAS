@@ -1,5 +1,7 @@
 package it.unicam.cs.bdslab.extrarnas.view.utils;
 
+import java.util.Map;
+
 public enum TOOL {
     RNAVIEW("RNAVIEW"),
     RNAPOLIS_ANNOTATOR("RNAPOLIS_ANNOTATOR"),
@@ -46,4 +48,24 @@ public enum TOOL {
             case RNAVIEW, MC_ANNOTATE, RNAPOLIS_ANNOTATOR, BARNABA, BPNET, FR3D, X3DNA  -> true;
         };
     }
+
+    private static Map<String, TOOL> stringToToolMap = Map.of(
+            "rw", RNAVIEW,
+            "ra", RNAPOLIS_ANNOTATOR,
+            "ba", BARNABA,
+            "bp", BPNET,
+            "fr", FR3D,
+            "x3", X3DNA,
+            "ma", MC_ANNOTATE
+    );
+
+    public static TOOL fromString(String s) {
+        return stringToToolMap.getOrDefault(s, null);
+    }
+
+    public static String[] getAvailableTools() {
+        return stringToToolMap.keySet().toArray(new String[0]);
+    }
+
+
 }
