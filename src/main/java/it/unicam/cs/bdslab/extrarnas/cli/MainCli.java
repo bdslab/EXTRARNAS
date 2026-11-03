@@ -5,6 +5,7 @@ import it.unicam.cs.bdslab.extrarnas.view.utils.TOOL;
 import org.apache.commons.cli.*;
 import org.bouncycastle.util.Strings;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -60,9 +61,25 @@ public class MainCli {
                 System.exit(1);
             }
 
-            for (TOOL t : tools) {
-                System.out.println(t.toString());
+            Path sharedDirectoryPath = Path.of(sharedFolder);
+            if (!sharedDirectoryPath.toFile().exists() || !sharedDirectoryPath.toFile().isDirectory()) {
+                logger.severe("the shared folder does not exist or is not a directory: " + sharedFolder);
+                System.exit(1);
             }
+
+            Path csvPath = Path.of(inputCsv);
+            if (!csvPath.toFile().exists() && !csvPath.toFile().isFile()) {
+                logger.severe("the input CSV file does not exist: " + inputCsv);
+                System.exit(1);
+            }
+
+            var app = new ExtrarnasApplication(
+                    sharedDirectoryPath,
+                    csvPath,
+                    tools
+            );
+
+            app.run();
 
         } catch (Exception e) {
             System.err.println("Error parsing command line options: " + e.getMessage());
