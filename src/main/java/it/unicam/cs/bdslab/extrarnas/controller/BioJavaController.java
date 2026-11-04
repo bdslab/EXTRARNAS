@@ -196,16 +196,6 @@ public class BioJavaController {
                     modelled.add(group.has3D());
                     map.put(group.getResidueNumber().getSeqNum(), k++);
                 }
-                // find unmodelled by checking the residue numbers
-                var residues = groups.stream().map(Group::getResidueNumber).map(ResidueNumber::getSeqNum).toList();
-                for (int i = 0; i < residues.size(); i++) {
-                    int current = residues.get(i);
-                    int next = (i + 1 < residues.size()) ? residues.get(i + 1) : current + 1;
-                    for (int missing = current + 1; missing < next; missing++) {
-                        sequence.add(i + 1, 'N');
-                        modelled.add(i + 1, false);
-                    }
-                }
                 return new FullChainSequence(sequence.stream()
                             .map(Object::toString)
                             .collect(Collectors.joining())
