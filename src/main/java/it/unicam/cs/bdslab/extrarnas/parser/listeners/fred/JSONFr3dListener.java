@@ -43,12 +43,6 @@ public class JSONFr3dListener extends JSONBaseListener {
     /** Flag indicating whether we are inside the "annotations" array. */
     private boolean inAnnotations = false;
 
-    /** Set of original sequence IDs extracted from the JSON. */
-    private final Set<Integer> positions = new HashSet<>();
-
-    /** Maps original sequence IDs to zero‑based indices. */
-    private final Map<Integer, Integer> positionMap = new HashMap<>();
-
     /**
      * Returns the parsed RNA secondary structure.
      *
@@ -121,10 +115,10 @@ public class JSONFr3dListener extends JSONBaseListener {
      */
     @Override
     public void enterMember(JSONParser.MemberContext ctx) {
-        String memberName = ctx.STRING().getText().replaceAll("\"", "");
+        String memberName = ctx.STRING().getText().replace("\"", "");
         positionStack.push(memberName);
-        if (inAnnotations) {
-            buildPair(ctx.STRING().getText().replaceAll("\"", ""), ctx);
+         if (inAnnotations) {
+            buildPair(ctx.STRING().getText().replace("\"", ""), ctx);
         } else {
             switch (memberName) {
                 case "pdb_id":
@@ -134,54 +128,12 @@ public class JSONFr3dListener extends JSONBaseListener {
                     structureBuilder.addHeaderInfo("Chain ID", ctx.value().STRING().getText());
                     break;
                 case "annotations":
-                    enterAnnotations(ctx);
+                    inAnnotations = true;
                     break;
                 case "modified":
-                    addToPositions(ctx.value().array().value().stream()
-                            .map(JSONParser.ValueContext::object)
-                            .collect(Collectors.toList())
-                    );
                     break;
             }
         }
-    }
-
-    /**
-     * Handles the "annotations" member: enables the annotation flag,
-     * collects all sequence IDs from the annotations array, and builds
-     * a mapping from original IDs to zero‑based indices.
-     *
-     * @param ctx the member context containing the annotations array
-     */
-    private void enterAnnotations(JSONParser.MemberContext ctx) {
-        inAnnotations = true;
-        addToPositions(ctx.value().array().value().stream()
-                .map(JSONParser.ValueContext::object)
-                .collect(Collectors.toList()));
-
-        List<Integer> sortedPositions = new ArrayList<>(positions);
-        Collections.sort(sortedPositions);
-
-        int i = 0;
-        for (Integer position : sortedPositions) {
-            positionMap.put(position, i++);
-        }
-    }
-
-    /**
-     * Extracts sequence IDs (seq_id, seq_id1, seq_id2) from a list of JSON objects
-     * and adds them to the {@code positions} set.
-     *
-     * @param objects a list of object contexts (each representing a residue or pair)
-     */
-    private void addToPositions(List<JSONParser.ObjectContext> objects) {
-        objects.forEach(obj ->
-                obj.member().stream()
-                        .filter(s -> s.STRING().getText().contains("seq_id1") ||
-                                s.STRING().getText().contains("seq_id2") ||
-                                s.STRING().getText().contains("seq_id"))
-                        .forEach(s -> positions.add(Integer.parseInt(s.value().STRING().getText().replaceAll("\"", ""))))
-        );
     }
 
     /**
@@ -205,10 +157,10 @@ public class JSONFr3dListener extends JSONBaseListener {
 
         switch (item) {
             case "seq_id1":
-                pairBuilder.setPos1(positionMap.get(Integer.parseInt(val)));
+                pairBuilder.setPos1((Integer.parseInt(val)));
                 break;
             case "seq_id2":
-                pairBuilder.setPos2(positionMap.get(Integer.parseInt(val)));
+                pairBuilder.setPos2((Integer.parseInt(val)));
                 break;
             case "nt1":
                 pairBuilder.setNucleotide1(val);

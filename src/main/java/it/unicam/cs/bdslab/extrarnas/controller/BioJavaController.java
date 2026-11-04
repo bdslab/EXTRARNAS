@@ -167,7 +167,13 @@ public class BioJavaController {
                     sequence.append(group.getPDBName().charAt(0)); // get 1-letter code
                     modelled.add(group.has3D());
                 }
-                return new FullChainSequence(sequence.toString(), modelled);
+                List<Group> atoms = chain.getAtomGroups();
+                Map<Integer, Integer> map = new HashMap<>(atoms.size());
+                int i = 0;
+                for (Group a : atoms) {
+                    map.put(a.getResidueNumber().getSeqNum(), i++);
+                }
+                return new FullChainSequence(sequence.toString(), modelled, map);
             }
         }
         throw new IOException("Chain " + chainId + " was not found in " + path);
@@ -182,9 +188,13 @@ public class BioJavaController {
                         .toList();
                 List<Character> sequence = new ArrayList<>(groups.size());
                 List<Boolean> modelled = new ArrayList<>(groups.size());
+                Map<Integer, Integer> map = new HashMap<>(groups.size());
+
+                int k = 0;
                 for (Group group : groups) {
                     sequence.add(group.getPDBName().charAt(0)); // get 1-letter code
                     modelled.add(group.has3D());
+                    map.put(group.getResidueNumber().getSeqNum(), k++);
                 }
                 // find unmodelled by checking the residue numbers
                 var residues = groups.stream().map(Group::getResidueNumber).map(ResidueNumber::getSeqNum).toList();
@@ -199,20 +209,24 @@ public class BioJavaController {
                 return new FullChainSequence(sequence.stream()
                             .map(Object::toString)
                             .collect(Collectors.joining())
-                        , modelled);
+                        , modelled
+                        , map);
             }
         }
         throw new IOException("Chain " + chainId + " was not found in " + path);
     }
 
-    public record FullChainSequence(String sequence, List<Boolean> modelled) {
+
+    public record FullChainSequence(String sequence, List<Boolean> modelled, Map<Integer, Integer> map) {
         public FullChainSequence {
             modelled = List.copyOf(modelled);
             if (sequence.length() != modelled.size()) {
                 throw new IllegalArgumentException("Sequence and modelled flags have different lengths");
             }
         }
-
+        public int remapSeqId(int i) {
+            return map.get(i);
+        }
         public int originalIndexForCompactedIndex(int compactedIndex) {
             int compacted = 0;
             for (int original = 0; original < modelled.size(); original++) {

@@ -68,9 +68,15 @@ public class ExtendedBPSEQExportController {
         for (ExportItem item : structures) {
             BioJavaController.FullChainSequence fullSequence =
                     loadFullChainSequence(sharedDirectory, item.baseName());
-            if (tool == TOOL.RNAPOLIS_ANNOTATOR || tool == TOOL.RNAVIEW) {
+
+            if (tool == TOOL.FR3D || tool == TOOL.X3DNA) {
+                item.structure().remapPositions(fullSequence::remapSeqId);
+            }
+
+            if (tool == TOOL.RNAPOLIS_ANNOTATOR || tool == TOOL.RNAVIEW || tool == TOOL.FR3D || tool == TOOL.X3DNA) {
                 item.structure().remapPositions(fullSequence::originalIndexForCompactedIndex);
             }
+
             item.structure().setSequence(fullSequence.sequence());
 
             if (secondaryStrcutureFormat != null) {
