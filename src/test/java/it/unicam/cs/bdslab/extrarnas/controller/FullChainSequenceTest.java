@@ -12,10 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,7 +28,7 @@ class FullChainSequenceTest {
         modelled.set(64, false);
         BioJavaController.FullChainSequence sequence =
                 new BioJavaController.FullChainSequence(
-                        "A".repeat(76), modelled);
+                        "A".repeat(76), modelled, new HashMap<>());
 
         assertEquals(76, sequence.sequence().length());
         assertEquals(59, sequence.originalIndexForCompactedIndex(59));

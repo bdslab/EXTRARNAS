@@ -43,6 +43,23 @@ public class ExtendedRNASecondaryStructure {
         return canonical;
     }
 
+    /**
+     * This methods return the canonical pairs removing pairs when there are more then one canonical starting from the same position
+     * e.g. (1,2,WW)(1,3,WW) -> (1,2,WW)
+     * @return a list of canonical pairs
+     */
+    public List<Pair> getNormalCanonical() {
+        this.pairs.sort((p1, p2) -> p1.getPos1() - p2.getPos1());
+        Map<Integer, Pair> map = new HashMap<>();
+        for (Pair p : pairs) {
+            if (!map.containsKey(p.getPos1()) && !map.containsKey(p.getPos2())) {
+                map.put(p.getPos2(), p);
+                map.put(p.getPos1(), p);
+            }
+        }
+        return map.values().stream().distinct().toList();
+    }
+
     public void remapPositions(IntUnaryOperator mapping) {
         pairs.forEach(pair -> pair.remapPositions(mapping));
     }

@@ -262,4 +262,26 @@ public class RNASecondaryStructurePrinterTest {
                 "Two cWW partner should be listed separately by a comma: " + cWWCol
         );
     }
+
+    @Test
+    void bpseqCoerentPairsWhenMultipleCanonicalOnSamePos() {
+        Pair p1 = new Pair(0, 1, "G", "C", BondType.LEONTIS_WESTHOF_cWW);
+        Pair p2 = new Pair(0, 2, "G", "C", BondType.LEONTIS_WESTHOF_cWW);
+        ExtendedRNASecondaryStructure s = new ExtendedRNASecondaryStructure.Builder()
+                .setSequence("GAUCUC")
+                .addPair(p2)
+                .addPair(p1)
+                .build();
+
+        String result = exporter.printCanonicalBPSEQ(s);
+
+        var lines = result.lines().toList();
+
+        int i = Integer.parseInt(lines.get(0).split("\\s")[2]);
+
+        int j = Integer.parseInt(lines.get(i - 1).split("\\s")[2]);
+        assertEquals(1, j);
+        assertEquals(3, i);
+        assertEquals(0,  Integer.parseInt(lines.get(1).split("\\s")[2]));
+    }
 }
