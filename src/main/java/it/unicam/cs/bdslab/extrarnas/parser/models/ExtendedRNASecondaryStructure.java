@@ -1,9 +1,6 @@
 package it.unicam.cs.bdslab.extrarnas.parser.models;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.IntUnaryOperator;
 
 public class ExtendedRNASecondaryStructure {
@@ -49,7 +46,7 @@ public class ExtendedRNASecondaryStructure {
      * @return a list of canonical pairs
      */
     public List<Pair> getNormalCanonical() {
-        this.pairs.sort((p1, p2) -> p1.getPos1() - p2.getPos1());
+        this.canonical.sort(Comparator.comparingInt(Pair::getPos1));
         Map<Integer, Pair> map = new HashMap<>();
         for (Pair p : pairs) {
             if (!map.containsKey(p.getPos1()) && !map.containsKey(p.getPos2())) {
