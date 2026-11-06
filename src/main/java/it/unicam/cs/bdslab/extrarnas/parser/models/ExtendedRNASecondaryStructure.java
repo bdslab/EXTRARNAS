@@ -48,7 +48,7 @@ public class ExtendedRNASecondaryStructure {
     public List<Pair> getNormalCanonical() {
         this.canonical.sort(Comparator.comparingInt(Pair::getPos1));
         Map<Integer, Pair> map = new HashMap<>();
-        for (Pair p : pairs) {
+        for (Pair p : this.canonical) {
             if (!map.containsKey(p.getPos1()) && !map.containsKey(p.getPos2())) {
                 map.put(p.getPos2(), p);
                 map.put(p.getPos1(), p);
