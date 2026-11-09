@@ -39,6 +39,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.*;
 import java.util.List;
 import java.util.logging.Level;
@@ -631,6 +632,8 @@ public class HomeController {
         Task<Void> task = new Task<>() {
             @Override
             protected Void call() throws Exception {
+                // Intialize a timer for counting the execution time of the selected tools
+                Instant start = Instant.now();
                 updateProgress(0, selectedTools.size());
                 int total = selectedTools.size();
                 int count = 0;
@@ -648,16 +651,24 @@ public class HomeController {
                             tool,
                             ioController.getSharedDirectory(),
                             ck_extractSS.isSelected()
-                                    ? RNASecondaryStructurePrinter.OutputFormat.BPSEQ
+                                    ? select_outputSS.getValue()
                                     : null,
                             ck_extractESS.isSelected()
-                                    ? RNASecondaryStructurePrinter.OutputFormat.EXTENDED_BPSEQ
+                                    ? select_outputESS.getValue()
                                     : null
                             );
                     count++;
                     updateProgress(count, total);
                 }
-
+                Instant end = Instant.now();
+                updateMessage("Completed");
+                logger.info("Execution completed for selected tools: " + selectedTools);
+                ioController.createMetadata(selectedTools,
+                        ck_extractSS.isSelected() ? select_outputSS.getValue() : null,
+                        ck_extractESS.isSelected() ? select_outputESS.getValue() : null,
+                        structures);
+                logger.info("Execution completed for selected tools: " + selectedTools);
+                logger.info("Execution time: " + java.time.Duration.between(start, end).toMillis() + " ms");
                 return null;
             }
         };
