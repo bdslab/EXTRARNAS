@@ -54,7 +54,7 @@ public class HomeController {
     private static final double TOOL_LIST_VERTICAL_PADDING = 4.0;
 
     public static final String dockerAllToolsImage = "extrarnas-core";
-    public static final String dockerAllToolsImageTag = "2.0.1";
+    public static final String dockerAllToolsImageTag = "1.1.0";
     public static final String dockerAllToolsContainer = "extrarnas-core-container";
     public static final String dockerfileAllToolsPath = "./docker/all-tools";
     public static final String dockerX3DNAImage = "x3dna-image";
