@@ -131,7 +131,7 @@ Once you receive the software archive, follow these steps:
 
 The archive name and location are required by the Docker configuration, so make sure they match exactly.
 
-After completing the installation procedure and starting EXTRARNAS through Docker, the required Docker image should be built successfully and the X3DNA-DSSR tool should become available in the application's tool list.
+After placing the archive in the correct directory, start EXTRARNAS normally. The application will build and use the required Docker image, and X3DNA-DSSR should become available in the tool list.
 
 If the tool does not appear in the list or does not work correctly when executed, check the application and Docker logs for error messages. In most cases, the issue is caused by an incorrect archive name, an incorrect file location, or by using a distribution that is not compatible with the Linux Docker environment. Verify these steps and repeat the installation procedure if necessary.
 
