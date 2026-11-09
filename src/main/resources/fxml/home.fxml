@@ -213,7 +213,7 @@
                                  <Insets bottom="6.0" />
                               </VBox.margin>
                            </GridPane>
-                       <ListView fx:id="toolListView" prefHeight="193.0" prefWidth="258.0" />
+                       <ListView fx:id="toolListView" prefHeight="158.0" prefWidth="258.0" styleClass="tool-list-view" />
                    </VBox>
                   <AnchorPane prefHeight="249.0" prefWidth="364.0">
                      <children>

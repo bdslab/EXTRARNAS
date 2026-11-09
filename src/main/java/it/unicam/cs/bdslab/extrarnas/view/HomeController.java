@@ -49,6 +49,8 @@ import static it.unicam.cs.bdslab.extrarnas.view.utils.TOOL.*;
 
 public class HomeController {
     public static final Logger logger = Logger.getLogger("it.unicam.cs.bdslab.extrarnas.view.HomeController");
+    private static final double TOOL_CELL_HEIGHT = 22.0;
+    private static final double TOOL_LIST_VERTICAL_PADDING = 4.0;
 
     public static final String dockerAllToolsImage = "extrarnas-core";
     public static final String dockerAllToolsImageTag = "2.0.1";
@@ -143,6 +145,7 @@ public class HomeController {
         toolListView
                 .setCellFactory(CheckBoxListCell
                     .forListView(this::getToolSelectionProperty));
+        toolListView.setFixedCellSize(TOOL_CELL_HEIGHT);
 
         this.filesTable.setItems(this.structures);
 
@@ -767,6 +770,15 @@ public class HomeController {
         }
         
         toolListView.setItems(tools);
+        resizeToolList(tools.size());
+    }
+
+    private void resizeToolList(int toolCount) {
+        double height = Math.max(TOOL_CELL_HEIGHT,
+                toolCount * TOOL_CELL_HEIGHT + TOOL_LIST_VERTICAL_PADDING);
+        toolListView.setMinHeight(height);
+        toolListView.setPrefHeight(height);
+        toolListView.setMaxHeight(height);
     }
 
     /**

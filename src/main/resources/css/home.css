@@ -14,6 +14,11 @@
     -fx-padding: 0;
 }
 
+.tool-list-view .list-cell {
+    -fx-font-size: 9pt;
+    -fx-padding: 1px 4px;
+}
+
 .menu {
     -fx-base: #1b3b5d;
 }
@@ -64,4 +69,3 @@
     -fx-background-color: white;    /* White background when selected */
     -fx-text-fill: black;           /* Black text when selected */
 }
-
