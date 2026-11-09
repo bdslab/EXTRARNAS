@@ -97,7 +97,7 @@
         </BorderPane>
     </top>
    <bottom>
-        <BorderPane fx:id="paneTranslationCleaning" prefHeight="160.0" prefWidth="1375.0" stylesheets="@../css/home.css" BorderPane.alignment="CENTER">
+        <BorderPane fx:id="paneTranslationCleaning" prefHeight="140.0" prefWidth="1375.0" stylesheets="@../css/home.css" BorderPane.alignment="CENTER">
             <left>
                 <BorderPane prefHeight="153.0" prefWidth="60.0" BorderPane.alignment="CENTER" />
             </left>
@@ -105,7 +105,7 @@
             <BorderPane fx:id="abstractionsPane" prefHeight="153.0" prefWidth="45.0" BorderPane.alignment="CENTER" />
          </right>
          <bottom>
-            <BorderPane prefHeight="126.0" prefWidth="1246.0" BorderPane.alignment="CENTER">
+            <BorderPane prefHeight="85.0" prefWidth="1336.0" BorderPane.alignment="CENTER">
                <left>
                   <ImageView fitHeight="52.0" fitWidth="166.0" pickOnBounds="true" preserveRatio="true" BorderPane.alignment="CENTER">
                      <image>
@@ -133,7 +133,7 @@
                <top>
                   <BorderPane prefHeight="19.0" prefWidth="1345.0" BorderPane.alignment="CENTER">
                      <top>
-                        <GridPane prefHeight="34.0" prefWidth="1270.0" BorderPane.alignment="CENTER">
+                        <GridPane prefHeight="10.0" prefWidth="1270.0" BorderPane.alignment="CENTER">
                           <columnConstraints>
                             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
                             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
@@ -168,7 +168,7 @@
         </BorderPane>
    </bottom>
    <center>
-        <BorderPane prefHeight="83.0" prefWidth="1375.0" BorderPane.alignment="CENTER">
+        <BorderPane prefHeight="90.0" prefWidth="1375.0" BorderPane.alignment="CENTER">
          <top>
                 <ButtonBar prefHeight="81.0" prefWidth="1189.0" styleClass="buttons" BorderPane.alignment="CENTER">
                <BorderPane.margin>
@@ -190,11 +190,30 @@
                      </children>
                   </VBox>
                    <VBox alignment="TOP_CENTER">
-                       <Label layoutX="131.0" layoutY="6.0" text="Tools">
-                        <font>
-                           <Font name="System Bold" size="16.0" />
-                        </font></Label>
-                       <ListView fx:id="toolListView" prefHeight="175.0" prefWidth="258.0" />
+                           <GridPane prefHeight="30.0" prefWidth="200.0">
+                             <columnConstraints>
+                               <ColumnConstraints hgrow="SOMETIMES" maxWidth="95.0" minWidth="10.0" prefWidth="54.000003814697266" />
+                               <ColumnConstraints hgrow="SOMETIMES" maxWidth="145.99999618530273" minWidth="10.0" prefWidth="145.99999618530273" />
+                             </columnConstraints>
+                             <rowConstraints>
+                               <RowConstraints minHeight="10.0" prefHeight="10.0" vgrow="SOMETIMES" />
+                             </rowConstraints>
+                              <children>
+                                 <CheckBox fx:id="ck_All" mnemonicParsing="false" prefHeight="18.0" prefWidth="178.0" text="All">
+                                    <padding>
+                                       <Insets left="5.0" />
+                                    </padding></CheckBox>
+                             <Label prefHeight="53.0" prefWidth="146.0" text="Tools" GridPane.columnIndex="1">
+                              <font>
+                                 <Font name="System Bold" size="16.0" />
+                              </font>
+                                 </Label>
+                              </children>
+                              <VBox.margin>
+                                 <Insets bottom="6.0" />
+                              </VBox.margin>
+                           </GridPane>
+                       <ListView fx:id="toolListView" prefHeight="193.0" prefWidth="258.0" />
                    </VBox>
                   <AnchorPane prefHeight="249.0" prefWidth="364.0">
                      <children>

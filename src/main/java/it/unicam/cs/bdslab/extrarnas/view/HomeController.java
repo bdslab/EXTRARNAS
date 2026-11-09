@@ -24,7 +24,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebEngine;
@@ -116,6 +115,10 @@ public class HomeController {
 
     @FXML
     private ChoiceBox<RNASecondaryStructurePrinter.OutputFormat> select_outputESS;
+
+    @FXML
+    private CheckBox ck_All;
+
     private boolean x3dnaAvailable = true;
     private final Map<TOOL, BooleanProperty> checkedItems = new HashMap<>();
 
@@ -139,15 +142,7 @@ public class HomeController {
 
         toolListView
                 .setCellFactory(CheckBoxListCell
-                    .forListView(tool -> checkedItems.computeIfAbsent(tool, t -> new SimpleBooleanProperty(false))));
-
-        // Set to enable or disable the "Run" button based on the selection of tools
-        toolListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-
-        toolListView.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
-            boolean anySelected = checkedItems.values().stream().anyMatch(BooleanProperty::get);
-            btn_run.setDisable(preprocessingActive || !anySelected);
-        });
+                    .forListView(this::getToolSelectionProperty));
 
         this.filesTable.setItems(this.structures);
 
@@ -196,11 +191,19 @@ public class HomeController {
             }
         });
 
-        btn_run.setDisable(true);
-
         handleExtractSelected(ck_extractESS);
 
         handleExtractSelected(ck_extractSS);
+        ck_All.setAllowIndeterminate(true);
+        ck_All.setOnAction(event -> {
+            boolean allToolsSelected = !toolListView.getItems().isEmpty()
+                    && toolListView.getItems().stream()
+                    .allMatch(tool -> getToolSelectionProperty(tool).get());
+            boolean selectAll = !allToolsSelected;
+            toolListView.getItems().forEach(tool -> getToolSelectionProperty(tool).set(selectAll));
+            updateRunButtonState();
+        });
+        updateRunButtonState();
 
         btn_addCsv.setOnAction((actionEvent) -> handleAddMoleculesList());
 
@@ -293,12 +296,7 @@ public class HomeController {
         preprocessingPanel.setManaged(active);
         preprocessingPanel.setVisible(active);
         btn_addCsv.setDisable(active);
-        if (active) {
-            btn_run.setDisable(true);
-        } else {
-            boolean anyToolSelected = checkedItems.values().stream().anyMatch(BooleanProperty::get);
-            btn_run.setDisable(!anyToolSelected);
-        }
+        updateRunButtonState();
     }
 
     private void markStructuresAsFailed(List<StructureInfo> requestedStructures, Path csvPath, String error) {
@@ -423,22 +421,38 @@ public class HomeController {
     }
 
     private void handleExtractSelected(CheckBox ckExtractX) {
-        ckExtractX.setOnAction((actionEvent) -> {
-            actionEvent.consume();
-            if (preprocessingActive) {
-                btn_run.setDisable(true);
-                return;
-            }
-            boolean selected = ckExtractX.isSelected();
-            boolean noToolSelected = checkedItems.values().stream().noneMatch(BooleanProperty::get);
-            if (selected && !noToolSelected) {
-                btn_run.setDisable(false);
-            } else {
-                if (!ck_extractSS.isSelected() && !ck_extractESS.isSelected()) {
-                    btn_run.setDisable(true);
-                }
-            }
+        ckExtractX.selectedProperty().addListener((observable, oldValue, newValue) ->
+                updateRunButtonState());
+    }
+
+    private BooleanProperty getToolSelectionProperty(TOOL tool) {
+        return checkedItems.computeIfAbsent(tool, selected -> {
+            BooleanProperty property = new SimpleBooleanProperty(false);
+            property.addListener((observable, oldValue, newValue) -> {
+                updateSelectAllState();
+                updateRunButtonState();
+            });
+            return property;
         });
+    }
+
+    private void updateSelectAllState() {
+        List<TOOL> tools = toolListView.getItems();
+        long selectedTools = tools.stream()
+                .filter(tool -> getToolSelectionProperty(tool).get())
+                .count();
+        boolean allSelected = !tools.isEmpty() && selectedTools == tools.size();
+        boolean someSelected = selectedTools > 0;
+
+        ck_All.setIndeterminate(someSelected && !allSelected);
+        ck_All.setSelected(allSelected);
+    }
+
+    private void updateRunButtonState() {
+        boolean extractionSelected = ck_extractSS.isSelected() || ck_extractESS.isSelected();
+        boolean toolSelected = toolListView.getItems().stream()
+                .anyMatch(tool -> getToolSelectionProperty(tool).get());
+        btn_run.setDisable(preprocessingActive || !extractionSelected || !toolSelected);
     }
 
     @FXML
