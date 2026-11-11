@@ -70,7 +70,7 @@ jobs:
         run: |
           mkdir release
           find artifacts -name "*.jar" -exec cp {} release/ \;
-          zip -r release/docker.zip docker/all-tools
+          zip -r release/docker.zip docker/all-tools docker/x3dna-tool
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
