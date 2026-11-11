@@ -1,5 +1,6 @@
 package it.unicam.cs.bdslab.extrarnas.view.utils;
 
+import java.util.Locale;
 import java.util.Map;
 
 public enum TOOL {
@@ -60,7 +61,7 @@ public enum TOOL {
     );
 
     public static TOOL fromString(String s) {
-        return stringToToolMap.getOrDefault(s, null);
+        return stringToToolMap.getOrDefault(s.toLowerCase(Locale.ROOT), null);
     }
 
     public static String[] getAvailableTools() {
