@@ -109,7 +109,7 @@ public class DockerController {
         return 1;
     }
 
-    private void makeDirInContainer(String containerId, String dir) throws IOException, InterruptedException {
+    private void makeDirInContainer(String containerId, String dir) throws InterruptedException {
         String[] mkdirCmd = {"mkdir", "-p", dir};
         ExecCreateCmdResponse execCreate = dockerClient.execCreateCmd(containerId)
                 .withAttachStdout(true)
@@ -253,10 +253,6 @@ public class DockerController {
     private static boolean looksLikeHeader(String line) {
         String lower = line.toLowerCase(Locale.ROOT);
         return lower.contains("id") || lower.contains("chain") || lower.contains("model");
-    }
-
-    public CsvPreprocessingResult preprocessCsvAndCollectStructures(Path sharedFolder, Path csvFile) throws IOException {
-        return preprocessCsvAndCollectStructures(sharedFolder, csvFile, CsvPreprocessingListener.NONE);
     }
 
     public CsvPreprocessingResult preprocessCsvAndCollectStructures(Path sharedFolder, Path csvFile,
@@ -552,7 +548,7 @@ public class DockerController {
     /**
      * Takes the PDB ID related to the CIF file and saves mappings and bundles under mappingsPath and bundlesPath.
      *
-     * @param pdbID
+     * @param pdbID pdb id
      */
     private void moveFiles(String pdbID) throws Exception {
         // Each CSV import may remove these temporary directories when it completes.
@@ -680,7 +676,7 @@ public class DockerController {
 
             for (var filtered : filteredFiles) {
                 var structure = filtered.structure();
-                var filteredChain = structure.getChains().get(0);
+                var filteredChain = structure.getChains().getFirst();
                 String newChainId = filteredChain.getName();
                 String originalAuthChain = originalChainByNewChain.get(newChainId);
                 if (originalAuthChain == null) {
@@ -735,7 +731,7 @@ public class DockerController {
 
     private void save(Structure f, Path preprocessedFolder, String pdbID, int model) throws Exception {
         // A legacy PDB chain corresponds to the auth chain used in the CSV input.
-        var chain = f.getChains().get(0);
+        var chain = f.getChains().getFirst();
         var chainId = chain.getName() == null || chain.getName().isBlank()
                 ? chain.getId()
                 : chain.getName();

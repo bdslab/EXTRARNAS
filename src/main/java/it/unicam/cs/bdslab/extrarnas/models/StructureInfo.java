@@ -69,4 +69,9 @@ public class StructureInfo {
     public void setError(String error) {
         this.error = error == null ? "" : error;
     }
+
+    @Override
+    public String toString() {
+        return name + "_" + chain;
+    }
 }

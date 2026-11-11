@@ -4,7 +4,8 @@ import it.unicam.cs.bdslab.extrarnas.parser.models.BondType;
 import it.unicam.cs.bdslab.extrarnas.parser.models.ExtendedRNASecondaryStructure;
 import it.unicam.cs.bdslab.extrarnas.parser.models.Pair;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Custom ANTLR listener for parsing bpnet output files.
@@ -26,7 +27,7 @@ import java.util.*;
 public class BpnetParserCustomListener extends BpnetGrammarBaseListener {
 
     /** Builder for the final RNA secondary structure. */
-    private ExtendedRNASecondaryStructure.Builder structureBuilder = new ExtendedRNASecondaryStructure.Builder();;
+    private ExtendedRNASecondaryStructure.Builder structureBuilder = new ExtendedRNASecondaryStructure.Builder();
 
     /** Set of pairs collected during parsing (using a Set to avoid duplicates). */
     private final Set<Pair> pairs = new HashSet<>();
@@ -98,13 +99,21 @@ public class BpnetParserCustomListener extends BpnetGrammarBaseListener {
      */
     @Override
     public void enterPair(BpnetGrammarParser.PairContext ctx) {
-        pairs.add(new Pair(
-                currentPosition - 1,
-                Integer.parseInt(ctx.INT().getFirst().getText()) - 1,
-                currentNucleotide,
-                ctx.TEXT().getFirst().getText(),
-                getType(ctx.BOND().getText()))
-        );
+        int pos1 = currentPosition - 1;
+        int pos2 = Integer.parseInt(ctx.INT().getFirst().getText()) - 1;
+        BondType bt = getType(ctx.BOND().getText());
+        if (pairs.stream().noneMatch(p ->
+                p.getPos1() == pos2
+             && p.getPos2() == pos1
+             && bt.equals(p.getType()))) {
+            pairs.add(new Pair(
+                    pos1,
+                    pos2,
+                    currentNucleotide,
+                    ctx.TEXT().getFirst().getText(),
+                    getType(ctx.BOND().getText()))
+            );
+        }
     }
 
     /**
@@ -120,8 +129,11 @@ public class BpnetParserCustomListener extends BpnetGrammarBaseListener {
         String edge1 = convertEdge(bond.substring(0, 1));
         String edge2 = convertEdge(bond.substring(2, 3));
         String orientation = bond.substring(3).toLowerCase();
-
-        return BondType.fromString(orientation + edge1 + edge2);
+        BondType bt = BondType.fromString(orientation + edge1 + edge2);
+        // Since BPNET returns for instance H:W on one side and W:H on the other we have to check the reverse
+        if (bt == BondType.UNKNOWN)
+            bt = BondType.fromString(orientation + edge2 + edge1);
+        return bt;
     }
 
     /**

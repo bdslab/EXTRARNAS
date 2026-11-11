@@ -88,7 +88,10 @@ EXTRARNAS leverages **Docker containers** to run its underlying analysis tools.
 The standard analysis environment is provided by the `extrarnas-core` image and is tagged with the EXTRARNAS release, for example `extrarnas-core:1.0.2-cibb2026`. Optional tools with separate licensing requirements, such as X3DNA-DSSR, use dedicated images.
 Using containers guarantees that:
 - You do not need to manually install complex third-party tools, compilers, or specific language versions (such as old Python versions) on your machine.
-- Executions are perfectly reproducible and run in an isolated environment.
+- Docker provides isolated and consistent execution environments.
+  However, rebuilding an image at different times may install different
+  versions of third-party annotation tools, as their dependencies are
+  not currently pinned.
 - *Note:* The `docker/` folder distributed alongside the application contains the Dockerfiles required by the software to build and run the images correctly.
 
 ## Build from Source
@@ -126,6 +129,26 @@ e.g.
 java -jar EXTRARNAS-windows.jar
 ```
 
+### Installing X3DNA-DSSR
+
+EXTRARNAS uses **X3DNA-DSSR** as an external tool. Since X3DNA-DSSR requires a license, you must first request access to the software and follow the official X3DNA licensing procedure.
+
+Once you receive the software archive, follow these steps:
+
+1. Make sure you downloaded the **Linux distribution**, as X3DNA-DSSR is executed inside the Docker environment.
+2. Place the downloaded ZIP archive inside the following directory:
+
+   `docker/x3dna-tool`
+
+3. Rename the archive exactly as follows:
+
+   `dssr-basic-linux-v2.8.1.zip`
+
+The archive name and location are required by the Docker configuration, so make sure they match exactly.
+
+After placing the archive in the correct directory, start EXTRARNAS normally. The application will build and use the required Docker image, and X3DNA-DSSR should become available in the tool list.
+
+If the tool does not appear in the list or does not work correctly when executed, check the application and Docker logs for error messages. In most cases, the issue is caused by an incorrect archive name, an incorrect file location, or by using a distribution that is not compatible with the Linux Docker environment. Verify these steps and repeat the installation procedure if necessary.
 
 ## Troubleshooting
 
@@ -146,11 +169,69 @@ java -Dcom.sun.xml.bind.v2.bytecode.ClassTailor.noOptimize=true -jar EXTRARNAS-<
 
 *(You don't need to specify extra complex classpath flags since it's a "fat" jar containing all its dependencies).*
 
-### Current limitations
+## Current limitations
 
 mmCIF→PDB conversion for bundled PDB entries may fail in a small number of cases because of placeholder crystallographic records produced by BeEM.
 
 These issues are limited to a few legacy structures and do not affect the majority of RNA entries available from the Protein Data Bank.
+
+### Non-standard nucleotides in local PDB files
+
+When processing user-provided structures in the legacy PDB format,
+EXTRARNAS cannot guarantee the correct recognition of all non-standard
+or chemically modified nucleotides.
+
+Nucleotide identification relies on BioJava's chemical component
+classification. Some components that are part of an RNA polymer may be
+classified as non-polymeric and therefore not recognized as
+nucleotides. For example, guanosine triphosphate (GTP) may be
+classified as NON-POLYMER, even when it represents the first residue
+of an RNA chain.
+
+Unlike mmCIF files, legacy PDB files may not provide sufficient
+information to reliably establish whether a non-standard component
+belongs to the RNA polymer, particularly when they are manually
+constructed and lack records such as SEQRES or MODRES.
+
+As a result, some non-standard nucleotides may be excluded from the
+reconstructed RNA sequence and subsequent structural annotations,
+potentially affecting sequence length, residue numbering, and
+extracted interactions.
+
+For reliable processing of RNA structures containing non-standard
+nucleotides, the mmCIF format is recommended. When using manually
+constructed PDB files, users should verify that all expected
+nucleotides are correctly recognized and included in the output.
+
+Sequence reconstruction and residue numbering
+
+### Sequence reconstruction and residue numbering in local PDB files
+
+User-provided legacy PDB files may not contain sufficient information
+to reconstruct the complete RNA sequence, particularly when they lack
+SEQRES records.
+
+Gaps in residue numbering do not necessarily correspond to unmodelled
+nucleotides. They may result from numbering conventions, residues
+intentionally removed during model construction, or modifications to
+an existing structure.
+
+When a reliable reference sequence is unavailable, EXTRARNAS
+reconstructs the sequence from the nucleotide residues present in the
+coordinate records, without automatically introducing unmodelled
+positions for numbering gaps.
+
+Users should verify that the reconstructed sequence and residue
+mapping are consistent with the intended RNA model. Whenever possible,
+the mmCIF format is recommended.
+
+### X3DNA-DSSR Licensing
+
+X3DNA-DSSR licensing: X3DNA-DSSR is not bundled with EXTRARNAS or its
+distributed Docker images. Users must obtain the executable
+independently under the appropriate academic or commercial license.
+Licensing information and downloads are available from the official
+DSSR licensing portal.
 
 ## License
 

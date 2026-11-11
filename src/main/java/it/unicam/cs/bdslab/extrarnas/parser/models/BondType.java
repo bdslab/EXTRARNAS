@@ -88,11 +88,9 @@ public enum BondType {
                 return b;
             }
             // Sometimes the tool might provide SH or HS based on the order of edges, so we can also check for reversed edge order
-            if (text.length() == 4 &&b.info.equalsIgnoreCase(new StringBuilder()
-                .append(text.charAt(0))
-                .append(text.charAt(2))
-                .append(text.charAt(3))
-                .toString()
+            if (text.length() == 4 &&b.info.equalsIgnoreCase(String.valueOf(text.charAt(0)) +
+                    text.charAt(2) +
+                    text.charAt(3)
             )) {
                 return b;
             }

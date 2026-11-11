@@ -46,8 +46,6 @@ public class JSONX3dnaListener extends JSONBaseListener {
     /** Stack tracking JSON object member names (keys) to maintain context. */
     private final Stack<String> positionStack = new Stack<>();
 
-    /** position map to normalize nucleotide positions */
-    private final Map<Integer, Integer> positionMap = new HashMap<>();
 
     /** Flag indicating whether we are inside the "pairs" array. */
     private boolean inPairs = false;
@@ -133,7 +131,6 @@ public class JSONX3dnaListener extends JSONBaseListener {
             switch (positionStack.peek()) {
                 case "pairs":
                     inPairs = true;
-                    buildPositionMap(ctx);
                     break;
                 case "nts":
                     inNts = true;
@@ -213,10 +210,10 @@ public class JSONX3dnaListener extends JSONBaseListener {
         String[] n = extractNucleotideValue(val);
 
         if (nt1) {
-            pairBuilder.setPos1(positionMap.get(Integer.parseInt(n[1])));
+            pairBuilder.setPos1(Integer.parseInt(n[1]));
             pairBuilder.setNucleotide1(n[0]);
         } else {
-            pairBuilder.setPos2(positionMap.get(Integer.parseInt(n[1])));
+            pairBuilder.setPos2(Integer.parseInt(n[1]));
             pairBuilder.setNucleotide2(n[0]);
         }
     }
@@ -227,7 +224,7 @@ public class JSONX3dnaListener extends JSONBaseListener {
         Matcher matcher = pattern.matcher(val);
 
         String nucleotide = null;
-        int index = -1;
+        int index = 0;
         if (matcher.matches()) {
             if (matcher.group(1) != null) {
                 // Slash case
@@ -243,7 +240,7 @@ public class JSONX3dnaListener extends JSONBaseListener {
         }
 
         if (nucleotide != null && nucleotide.length() > 1) {
-            logger.warn("Nucleotide string '{}' has length >1 – truncating to first character (uncommon residue) '{}'.", nucleotide, nucleotide.substring(0, 1));
+            logger.warn("Nucleotide string '{}' has length >1 – truncating to first character (uncommon residue) '{}'.", nucleotide, nucleotide.charAt(0));
             nucleotide = nucleotide.substring(0, 1);
         }
 
@@ -285,25 +282,5 @@ public class JSONX3dnaListener extends JSONBaseListener {
             inPairs = false;
             inNts = false;
         }
-    }
-
-    private void buildPositionMap(JSONParser.MemberContext ctx) {
-        Set<Integer> positions = new HashSet<>();
-        ctx.value().array().value().forEach(value ->
-                value.object().member().forEach(member -> {
-                    String info = member.STRING().getText().replaceAll("\"", "");
-                    if(Objects.equals(info, "nt1") || Objects.equals(info, "nt2")) {
-                        String val = getItem(member);
-                        String[] n = extractNucleotideValue(extractResidueIdentifier(val));
-                        positions.add(Integer.parseInt(n[1]));
-                    }
-                })
-        );
-
-        logger.warn("Normalizing residue positions");
-
-        positions.stream()
-                .sorted()
-                .forEach(position -> positionMap.put(position, positionMap.size()));
     }
 }

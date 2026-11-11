@@ -13,12 +13,12 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.concurrent.Task;
 import javafx.concurrent.Worker;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.VBox;
-import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
@@ -128,7 +128,6 @@ public class Main extends Application {
             Runnable onAllDone = () -> {
                 if (t1.isDone() && t2.isDone()) {
                     boolean ok1 = getSafe(t1, false);
-                    boolean ok2 = getSafe(t2, false);
                     title.setText(ok1 ? "Container stopped." : "Failed to stop container.");
                     done.set(true);
                     closeBtn.setDisable(false);
@@ -267,7 +266,7 @@ public class Main extends Application {
             stage = new Stage();
         }
         stage.setTitle("EXTRARNAS");
-        stage.getIcons().add(new Image(String.valueOf(App.class.getResource("/img/EXTRARNAS-logo.png").toURI())));
+        stage.getIcons().add(new Image(String.valueOf(Objects.requireNonNull(App.class.getResource("/img/EXTRARNAS-logo.png")).toURI())));
         stage.setScene(new Scene(root));
         return stage;
     }

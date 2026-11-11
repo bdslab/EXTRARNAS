@@ -27,7 +27,7 @@ import java.util.Objects;
 public class RNAviewCustomListener extends RNAviewGrammarBaseListener {
 
     /** Builder for the final RNA secondary structure. */
-    private ExtendedRNASecondaryStructure.Builder structureBuilder = new ExtendedRNASecondaryStructure.Builder();;
+    private ExtendedRNASecondaryStructure.Builder structureBuilder = new ExtendedRNASecondaryStructure.Builder();
 
     /** The final built structure. */
     private ExtendedRNASecondaryStructure structure;
@@ -87,7 +87,7 @@ public class RNAviewCustomListener extends RNAviewGrammarBaseListener {
             return;
         }
 
-        String positionsString = ctx.ASSIGNED_NUMBERS().getText().replaceAll(",", "");
+        String positionsString = ctx.ASSIGNED_NUMBERS().getText().replace(",", "");
         int[] positions = Arrays.stream(positionsString.split("_"))
                 .mapToInt(Integer::parseInt)
                 .toArray();

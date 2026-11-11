@@ -3,12 +3,10 @@ package it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate;
 import it.unicam.cs.bdslab.extrarnas.parser.models.BondType;
 import it.unicam.cs.bdslab.extrarnas.parser.models.ExtendedRNASecondaryStructure;
 import it.unicam.cs.bdslab.extrarnas.parser.models.Pair;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.McAnnotateGrammarParser;
-import org.antlr.v4.runtime.tree.TerminalNode;
 
 /**
  * Custom ANTLR listener for parsing mc‑annotate output files.
@@ -30,7 +28,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 public class McAnnotateCustomListener extends McAnnotateGrammarBaseListener {
 
     /** Builder for the final RNA secondary structure. */
-    private ExtendedRNASecondaryStructure.Builder structureBuilder = new ExtendedRNASecondaryStructure.Builder();;
+    private ExtendedRNASecondaryStructure.Builder structureBuilder = new ExtendedRNASecondaryStructure.Builder();
 
     /** The final built structure. */
     private ExtendedRNASecondaryStructure structure;
@@ -162,7 +160,7 @@ public class McAnnotateCustomListener extends McAnnotateGrammarBaseListener {
         String o = orientation.getText().equals("cis") ? "c" : "t";
         String[] edges = bond.split("/");
         if (edges.length < 2 || edges[0].isEmpty() || edges[1].isEmpty()) return BondType.UNKNOWN;
-        return BondType.fromString(o + edges[0].substring(0, 1) + edges[1].substring(0, 1));
+        return BondType.fromString(o + edges[0].charAt(0) + edges[1].charAt(0));
     }
 
     /**

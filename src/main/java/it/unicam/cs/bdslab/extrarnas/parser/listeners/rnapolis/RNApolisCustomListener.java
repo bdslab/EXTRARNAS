@@ -31,7 +31,7 @@ public class RNApolisCustomListener extends RNApolisGrammarBaseListener {
     private final List<ExtendedRNASecondaryStructure> structures = new ArrayList<>();
 
     /** Builder for the current strand being processed. */
-    private ExtendedRNASecondaryStructure.Builder currentStructureBuilder = new ExtendedRNASecondaryStructure.Builder();;
+    private ExtendedRNASecondaryStructure.Builder currentStructureBuilder = new ExtendedRNASecondaryStructure.Builder();
 
     /** Bond type for the current interaction line (applies to all pairs in that line). */
     private BondType currentInteractionType;

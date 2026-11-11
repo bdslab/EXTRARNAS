@@ -7,15 +7,11 @@ import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
-import javafx.stage.Stage;
 import javafx.stage.Modality;
+import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
@@ -154,13 +150,13 @@ public class SetupController {
             new Thread(taskBuildx, "setup-docker-buildx").start();
         });
 
-        taskBuild.setOnFailed(e -> {
+        taskBuild.setOnFailed(e ->
             Platform.runLater(() -> {
                 loadingStage.close();
                 String msg = taskBuild.getException() == null ? "Unknown error" : taskBuild.getException().getMessage();
                 showAlert(Alert.AlertType.ERROR, "Setup error", msg);
-            });
-        });
+            })
+        );
 
         
         taskBuildx.setOnSucceeded(e -> {
@@ -175,13 +171,13 @@ public class SetupController {
             });
         });
 
-        taskBuildx.setOnFailed(e -> {
+        taskBuildx.setOnFailed(e ->
             Platform.runLater(() -> {
                 loadingStage.close();
                 String msg = taskBuildx.getException() == null ? "Unknown error" : taskBuildx.getException().getMessage();
                 showAlert(Alert.AlertType.ERROR, "Setup error", msg);
-            });
-        });
+            })
+        );
 
         loadingStage.show();
         new Thread(taskBuild, "setup-docker-build").start();

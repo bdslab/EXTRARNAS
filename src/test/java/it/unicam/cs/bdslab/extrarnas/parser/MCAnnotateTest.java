@@ -1,6 +1,8 @@
 package it.unicam.cs.bdslab.extrarnas.parser;
 
-import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.*;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.McAnnotateCustomListener;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.McAnnotateGrammarLexer;
+import it.unicam.cs.bdslab.extrarnas.parser.listeners.mcannotate.McAnnotateGrammarParser;
 import it.unicam.cs.bdslab.extrarnas.parser.models.ExtendedRNASecondaryStructure;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -9,17 +11,17 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class MCAnnotateTest {
     @Test
-    public void testMCAnnotate() throws FileNotFoundException, IOException, URISyntaxException {
-        File inputFile = new File(this.getClass().getResource("/MC_4PLX.txt").toURI());
+    public void testMCAnnotate() throws IOException, URISyntaxException {
+        File inputFile = new File(Objects.requireNonNull(this.getClass().getResource("/MC_4PLX.txt")).toURI());
         CharStream charStream = CharStreams.fromReader(new FileReader(inputFile));
         McAnnotateGrammarLexer lexer = new McAnnotateGrammarLexer(charStream);
         CommonTokenStream tokens = new CommonTokenStream(lexer);

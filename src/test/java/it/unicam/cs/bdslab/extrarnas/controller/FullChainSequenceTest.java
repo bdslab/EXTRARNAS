@@ -1,28 +1,20 @@
 package it.unicam.cs.bdslab.extrarnas.controller;
 
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
-import org.biojava.nbio.structure.StructureException;
-import org.junit.jupiter.api.Test;
-
-import it.unicam.cs.bdslab.extrarnas.controller.ExtendedBPSEQExportController.ExportItem;
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.rnapolis.RNApolisCustomListener;
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.rnapolis.RNApolisGrammarLexer;
 import it.unicam.cs.bdslab.extrarnas.parser.listeners.rnapolis.RNApolisGrammarParser;
 import it.unicam.cs.bdslab.extrarnas.parser.models.ExtendedRNASecondaryStructure;
-import it.unicam.cs.bdslab.extrarnas.view.utils.TOOL;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 class FullChainSequenceTest {
 
@@ -36,26 +28,27 @@ class FullChainSequenceTest {
         modelled.set(64, false);
         BioJavaController.FullChainSequence sequence =
                 new BioJavaController.FullChainSequence(
-                        "A".repeat(76), modelled);
+                        "A".repeat(76), modelled, new HashMap<>());
 
         assertEquals(76, sequence.sequence().length());
         assertEquals(59, sequence.originalIndexForCompactedIndex(59));
         assertEquals(65, sequence.originalIndexForCompactedIndex(60));
         assertThrows(IllegalArgumentException.class,
-                () -> sequence.originalIndexForCompactedIndex(71));
+                () -> sequence.originalIndexForCompactedIndex(77));
     }
 
     @Test 
-    void maps_4PLXC() throws Exception, Exception, URISyntaxException {
-        String pathTo4PLXC = this.getClass().getResource("/4PLX_C.3db").getPath();
+    void maps_4PLXC() throws Exception {
+        String pathTo4PLXC = Objects.requireNonNull(this.getClass().getResource("/4PLX_C.3db")).getPath();
         File file4plxcRnaPolis = new File(pathTo4PLXC);
         // download cif with Biojavacontroller
         BioJavaController bioJavaController = BioJavaController.getInstance();
-        Path downloadedPDB = bioJavaController.downloadPDB("4PLX", this.getClass().getResource("/out").toURI().getPath().toString().substring(1));
+        Path downloadedPDB = bioJavaController.downloadPDB("4PLX", Objects.requireNonNull(this.getClass().getResource("")).toURI().getPath().substring(1));
         // change .pdb to .cif
         Path downloadedCIF = Path.of(downloadedPDB.toString().replace(".pdb", ".cif"));
         BioJavaController.FullChainSequence sequence = bioJavaController.readFullChainSequence(downloadedCIF, "C");
         var rnapolisStructure = parseRNApolis(Path.of(file4plxcRnaPolis.getAbsolutePath()));
+        assertNotNull(rnapolisStructure);
         rnapolisStructure.remapPositions(sequence::originalIndexForCompactedIndex);
         
     }
@@ -66,6 +59,6 @@ class FullChainSequenceTest {
         var listener = new RNApolisCustomListener();
         ParseTreeWalker.DEFAULT.walk(listener, parser.rnapolisFile());
         List<ExtendedRNASecondaryStructure> structures = listener.getStructures();
-        return structures.isEmpty() ? null : structures.get(0);
+        return structures.isEmpty() ? null : structures.getFirst();
     }
 }
