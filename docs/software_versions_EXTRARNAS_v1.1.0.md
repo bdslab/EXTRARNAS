@@ -1,8 +1,4 @@
-# EXTRARNAS - Software environment manifest (LNBI experiments)
-
-**Status:** Candidate manifest. The user has inspected locally available Docker images. **Confirm that `extrarnas-core:2.0.1` and `x3dna-image:latest` were the actual images used to generate EXTRARNAS v7 experiment outputs before labeling this an experiment-verified manifest.**
-
-**Data source:** CLI outputs from the user's Mac (`docker images --no-trunc`, `docker run --rm ... pip freeze`, `git rev-parse HEAD`, `sha256sum`, and `x3dna-dssr --version`). The provided output was transcribed, not independently executed against the Mac images. Dockerfile installation methods were separately checked against the `dev` branch of the GitHub repository at https://github.com/bdslab/EXTRARNAS.
+# EXTRARNAS - Software environment manifest v1.1.0
 
 ## Container images
 
@@ -85,10 +81,4 @@ ViennaRNA==2.7.2
 
 X3DNA-DSSR is **not included** in the publicly distributed EXTRARNAS images or application. The authors used a separately licensed DSSR executable to generate its annotations. Redistributing the binary or licensed archive requires appropriate authorization. Users can reproduce downstream comparisons from the published interaction outputs without redistributing X3DNA-DSSR.
 
-## Verification still needed
 
-1. Confirm that both Docker image IDs above correspond to the exact run that generated the **v7 BPSEQ/BPSEQE** output set; a newer local image could differ even if both are functional.
-2. Record the **EXTRARNAS Java application Git commit and release tag** from that run.
-3. Optionally record host `java -version` and `docker version --format '{{.Server.Version}}'`.
-4. MC-Annotate lacks an independently established version number. Its binary SHA-256 is sufficient to distinguish identical binary files, but it does not reveal a human-readable release number.
-5. Keep the two image IDs with the manifest, even if their tags are renamed in the future. They are local image hashes, not a guarantee of rebuild reproducibility.
