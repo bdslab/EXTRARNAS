@@ -145,9 +145,8 @@ public class DockerController {
             String chain = inputRow.chainFilter();
             listener.onRowStarted(pdbID, chain, rowIndex + 1, totalRows);
             logger.info("Processing structure " + pdbID + " with requested auth chain filter: " + chain);
-
             // Host path for reading (bind of /data)
-            Path fileToFilter = sharedFolder.resolve(pdbID + ".pdb");
+            Path fileToFilter = sharedFolder.resolve(pdbID + ".cif");
             var isPDB = true;
 
             if (!Files.exists(fileToFilter)) {
@@ -157,8 +156,8 @@ public class DockerController {
                     if (fileToFilter.toString().endsWith("cif")) {
                         logger.info("Structure " + pdbID + " requires mmCIF preprocessing; starting BeEM conversion");
                         isPDB = false;
-                        this.beem(pdbID + ".cif");
-                        this.moveFiles(pdbID);
+//                        this.beem(pdbID + ".cif");
+//                        this.moveFiles(pdbID);
                     }
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, "Download or BeEM conversion failed for " + pdbID
@@ -172,6 +171,8 @@ public class DockerController {
             }
             // preprocessing
             try {
+                this.beem(pdbID + ".cif");
+                this.moveFiles(pdbID);
                 if (isPDB) {
                     filterPDB(chain, pdbID, preprocessedFolder, fileToFilter);
                 } else {
@@ -515,7 +516,7 @@ public class DockerController {
     public void beem(String cifFile) throws InterruptedException {
         logger.info("Running BeEM conversion from mmCIF to bundled PDB files: " + cifFile);
         // call BeEM
-        String shellCmd = "cd /data && /home/BeEM/BeEM" + " " + cifFile;
+        String shellCmd = "cd /data && /home/BeEM/BeEM" + " " + cifFile + " -outfmt=1";
 
         // Create exec command
         ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(container.getId()).withAttachStdout(true).withAttachStderr(true).withCmd("bash", "-c", shellCmd).exec();

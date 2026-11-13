@@ -95,7 +95,7 @@ public class BioJavaController {
             downloadOriginalCif(pdbId, cifPath);
         }
         
-        return pdbPath;
+        return cifPath;
     }
     
     private void downloadOriginalCif(String pdbId, Path destination) throws IOException {
@@ -159,7 +159,7 @@ public class BioJavaController {
         Structure structure = cifReader.getStructure(path.toFile());
 
         for (Chain chain : structure.getChains()) {
-            if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
+            if (chainId.equals(chain.getName())) {
                 List<Group> groups = chain.getSeqResGroups().stream().toList();
                 StringBuilder sequence = new StringBuilder(groups.size());
                 List<Boolean> modelled = new ArrayList<>(groups.size());
@@ -244,8 +244,7 @@ public class BioJavaController {
             Set<String> allowedSet = new HashSet<>(List.of(allowedIds.split(";")));
             // check both getName() (auth_asym_id, es. "2") and getId() (label_asym_id, e.g. "C").
             // The mapping/CSV are with auth_asym_id, retrivable with BioJava with getName().
-            idFilter = chain -> allowedSet.contains(chain.getName())
-                    || allowedSet.contains(chain.getId());
+            idFilter = chain -> allowedSet.contains(chain.getName());
         }
         // combine id filter with rna filter
         return idFilter.and(getRNAFilter());

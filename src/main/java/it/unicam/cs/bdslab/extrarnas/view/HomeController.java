@@ -707,6 +707,7 @@ public class HomeController {
                 showAlert(Alert.AlertType.ERROR, "Process Error", "",
                     "An error occurred during execution: " + task.getException().getMessage())
             );
+            task.getException().printStackTrace();
         });
 
         loadingAlert.show();
