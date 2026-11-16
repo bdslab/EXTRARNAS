@@ -549,6 +549,7 @@ public class HomeController {
                         .orElse("Unknown preprocessing error");
                 markStructuresAsFailed(requestedStructures, csvPath, error);
                 setPreprocessingActive(false);
+                preprocessTask.getException().printStackTrace();
                 showAlert(Alert.AlertType.ERROR, "CSV preprocessing error", "",
                         error);
             });
