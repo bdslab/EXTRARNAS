@@ -563,6 +563,7 @@ public class HomeController {
                         .orElse("Unknown preprocessing error");
                 markStructuresAsFailed(requestedStructures, csvPath, error);
                 setPreprocessingActive(false);
+                preprocessTask.getException().printStackTrace();
                 showAlert(Alert.AlertType.ERROR, "CSV preprocessing error", "",
                         error);
             });
@@ -721,6 +722,7 @@ public class HomeController {
                 showAlert(Alert.AlertType.ERROR, "Process Error", "",
                     "An error occurred during execution: " + task.getException().getMessage())
             );
+            task.getException().printStackTrace();
         });
 
         loadingAlert.show();

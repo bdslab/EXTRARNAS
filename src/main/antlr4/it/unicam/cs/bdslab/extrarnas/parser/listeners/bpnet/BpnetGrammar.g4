@@ -16,9 +16,9 @@ grammar BpnetGrammar;
 
 bpnetFile: pairs+ EOF;                    // One or more pair blocks
 
-pairs: INT INT TEXT '?' TEXT pair*;       // Header line + optional bond details
+pairs: INT INT TEXT '?' (INT | TEXT) pair*;       // Header line + optional bond details
 
-pair:  INT INT TEXT '?' TEXT BOND;        // Single bond line
+pair:  INT INT TEXT '?' (INT | TEXT) BOND;        // Single bond line
 
 
 // ------------------------------------

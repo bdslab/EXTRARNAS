@@ -8,6 +8,7 @@ import org.biojava.nbio.structure.io.PDBFileReader;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -51,8 +52,11 @@ public class BioJavaController {
     }
 
     public List<FilteredStructure> filterByModelAndChain(Path path, String chainId,
-                                                          String modelFilter) throws IOException {
-        var structure = reader.getStructure(path.toFile());
+                                                         String modelFilter) throws IOException {
+        Structure structure;
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            structure = reader.getStructure(inputStream);
+        }
         var filter = getFilter("*");
         filter = getFilter(chainId);
         Set<Integer> requestedModels = parseModelFilter(modelFilter, structure.nrModels());
@@ -129,7 +133,18 @@ public class BioJavaController {
         
         return pdbPath;
     }
-    
+
+    public Path downloadCIF(String pdbId, String outputFolderPath) throws StructureException, IOException {
+        pdbId = normalizePdbId(pdbId);
+        Path outputDirectory = Paths.get(outputFolderPath);
+        Files.createDirectories(outputDirectory);
+        Path cifPath = outputDirectory.resolve(pdbId + ".cif");
+        if (!Files.exists(cifPath)) {
+            downloadOriginalCif(pdbId, cifPath);
+        }
+        return cifPath;
+    }
+
     private void downloadOriginalCif(String pdbId, Path destination) throws IOException {
         pdbId = normalizePdbId(pdbId);
         if (Files.exists(destination)) {
@@ -188,10 +203,13 @@ public class BioJavaController {
             return readFullChainSequenceManualPDB(path, chainId);
         }
 
-        Structure structure = cifReader.getStructure(path.toFile());
+        Structure structure;
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            structure = cifReader.getStructure(inputStream);
+        }
 
         for (Chain chain : structure.getChains()) {
-            if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
+            if (chainId.equals(chain.getName())) {
                 List<Group> groups = chain.getSeqResGroups().stream().toList();
                 StringBuilder sequence = new StringBuilder(groups.size());
                 List<Boolean> modelled = new ArrayList<>(groups.size());
@@ -212,7 +230,10 @@ public class BioJavaController {
     }
 
     private FullChainSequence readFullChainSequenceManualPDB(Path path, String chainId) throws IOException {
-        Structure structure = reader.getStructure(path.toFile());
+        Structure structure;
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            structure = reader.getStructure(inputStream);
+        }
         for (Chain chain : structure.getChains()) {
             if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
                 List<Group> groups = chain.getAtomGroups().stream()
@@ -276,8 +297,7 @@ public class BioJavaController {
             Set<String> allowedSet = new HashSet<>(List.of(allowedIds.split(";")));
             // check both getName() (auth_asym_id, es. "2") and getId() (label_asym_id, e.g. "C").
             // The mapping/CSV are with auth_asym_id, retrivable with BioJava with getName().
-            idFilter = chain -> allowedSet.contains(chain.getName())
-                    || allowedSet.contains(chain.getId());
+            idFilter = chain -> allowedSet.contains(chain.getName());
         }
         // combine id filter with rna filter
         return idFilter.and(getRNAFilter());

@@ -66,6 +66,7 @@ public class ExtendedBPSEQExportController {
 
         int exported = 0;
         for (ExportItem item : structures) {
+            logger.info("Exporting structure " + item.baseName() + item.suffix() + " for tool " + tool.getName());
             BioJavaController.FullChainSequence fullSequence =
                     loadFullChainSequence(sharedDirectory, item.baseName());
 
