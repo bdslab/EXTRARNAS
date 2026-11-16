@@ -155,6 +155,7 @@ public class DockerController {
             if (Files.exists(sharedFolder.resolve(pdbID + ".pdb"))) {
                 logger.info("Structure " + pdbID + " found as PDB in shared folder, using local PDB file");
                 isPDB = true;
+                fileToFilter = sharedFolder.resolve(pdbID + ".pdb");
             } else {
                 try {
                     Path cifPath = fileToFilter;
