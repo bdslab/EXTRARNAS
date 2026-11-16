@@ -8,6 +8,7 @@ import org.biojava.nbio.structure.io.PDBFileReader;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -39,7 +40,10 @@ public class BioJavaController {
     }
 
     public List<Structure> filterById(Path path, String chainId) throws IOException {
-        var structure = reader.getStructure(path.toFile());
+        Structure structure;
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            structure = reader.getStructure(inputStream);
+        }
         var filter = getFilter(chainId);
         var structures = new ArrayList<Structure>();
         for (Chain chain : structure.getChains()) {
@@ -53,7 +57,10 @@ public class BioJavaController {
     }
 
     public List<Structure> filterByStar(Path path) throws IOException {
-        var structure = reader.getStructure(path.toFile());
+        Structure structure;
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            structure = reader.getStructure(inputStream);
+        }
         var filter = getFilter("*");
 
         var structures = new ArrayList<Structure>();
