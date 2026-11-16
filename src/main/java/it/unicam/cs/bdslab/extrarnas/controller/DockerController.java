@@ -147,17 +147,25 @@ public class DockerController {
             logger.info("Processing structure " + pdbID + " with requested auth chain filter: " + chain);
             // Host path for reading (bind of /data)
             Path fileToFilter = sharedFolder.resolve(pdbID + ".cif");
-            var isPDB = true;
+            var isPDB = false;
 
-            if (!Files.exists(fileToFilter)) {
-                logger.info("No local PDB file found for " + pdbID + "; downloading the structure with BioJava");
+            if (Files.exists(sharedFolder.resolve(pdbID + ".pdb"))) {
+                logger.info("Structure " + pdbID + " found as PDB in shared folder, using local PDB file");
+                isPDB = true;
+            } else {
                 try {
-                    fileToFilter = bioJavaController.downloadPDB(pdbID, String.valueOf(sharedFolder));
-                    if (fileToFilter.toString().endsWith("cif")) {
-                        logger.info("Structure " + pdbID + " requires mmCIF preprocessing; starting BeEM conversion");
-                        isPDB = false;
-//                        this.beem(pdbID + ".cif");
-//                        this.moveFiles(pdbID);
+                    Path cifPath = fileToFilter;
+                    if (!Files.exists(fileToFilter)) {
+                        logger.info("Structure " + pdbID + " does not exist as mmCIF file, downloading...");
+                        cifPath = bioJavaController.downloadCIF(pdbID, String.valueOf(sharedFolder));
+                    }
+                    if (!Files.exists(cifPath)) {
+                        logger.info("Structure " + pdbID + " does not exist as mmCIF file");
+                        bioJavaController.downloadPDB(pdbID, String.valueOf(sharedFolder));
+                        isPDB = true;
+                    } else {
+                        this.beem(pdbID + ".cif");
+                        this.moveFiles(pdbID);
                     }
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, "Download or BeEM conversion failed for " + pdbID
@@ -171,8 +179,6 @@ public class DockerController {
             }
             // preprocessing
             try {
-                this.beem(pdbID + ".cif");
-                this.moveFiles(pdbID);
                 if (isPDB) {
                     filterPDB(chain, pdbID, preprocessedFolder, fileToFilter);
                 } else {

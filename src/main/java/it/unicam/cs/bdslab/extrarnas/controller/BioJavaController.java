@@ -95,6 +95,17 @@ public class BioJavaController {
             downloadOriginalCif(pdbId, cifPath);
         }
         
+        return pdbPath;
+    }
+
+    public Path downloadCIF(String pdbId, String outputFolderPath) throws StructureException, IOException {
+        pdbId = normalizePdbId(pdbId);
+        Path outputDirectory = Paths.get(outputFolderPath);
+        Files.createDirectories(outputDirectory);
+        Path cifPath = outputDirectory.resolve(pdbId + ".cif");
+        if (!Files.exists(cifPath)) {
+            downloadOriginalCif(pdbId, cifPath);
+        }
         return cifPath;
     }
     
@@ -156,7 +167,10 @@ public class BioJavaController {
             return readFullChainSequenceManualPDB(path, chainId);
         }
 
-        Structure structure = cifReader.getStructure(path.toFile());
+        Structure structure;
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            structure = cifReader.getStructure(inputStream);
+        }
 
         for (Chain chain : structure.getChains()) {
             if (chainId.equals(chain.getName())) {
@@ -180,7 +194,10 @@ public class BioJavaController {
     }
 
     private FullChainSequence readFullChainSequenceManualPDB(Path path, String chainId) throws IOException {
-        Structure structure = reader.getStructure(path.toFile());
+        Structure structure;
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            structure = reader.getStructure(inputStream);
+        }
         for (Chain chain : structure.getChains()) {
             if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
                 List<Group> groups = chain.getAtomGroups().stream()
