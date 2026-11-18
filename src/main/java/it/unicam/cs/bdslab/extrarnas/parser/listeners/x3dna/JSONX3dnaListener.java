@@ -219,7 +219,7 @@ public class JSONX3dnaListener extends JSONBaseListener {
     }
 
     private String[] extractNucleotideValue(String val) {
-        String regex = "^(?:([A-Z]+[0-9]+)/([0-9]+)|([A-Z]+)([0-9]+))$";
+        String regex = "^(?:([A-Z]+[0-9]+)/([0-9]+)|([A-Z]+)([0-9]+)|([A-Z0-9]{3})([0-9]+))$";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(val);
 
@@ -230,10 +230,14 @@ public class JSONX3dnaListener extends JSONBaseListener {
                 // Slash case
                 nucleotide = matcher.group(1);
                 index += Integer.parseInt(matcher.group(2));
-            } else {
+            } else if (matcher.group(3) != null) {
                 // No-slash case
                 nucleotide = matcher.group(3);
                 index += Integer.parseInt(matcher.group(4));
+            } else {
+                // Three-letter case
+                nucleotide = matcher.group(5);
+                index += Integer.parseInt(matcher.group(6));
             }
         } else {
             logger.warn("Unrecognised residue format: '{}'. Expected patterns: 'LETTERS+DIGITS/DIGITS' or 'LETTERS+DIGITS'", val);
