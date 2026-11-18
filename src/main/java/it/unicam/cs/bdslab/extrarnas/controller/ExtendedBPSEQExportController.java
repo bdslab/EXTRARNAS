@@ -253,8 +253,7 @@ public class ExtendedBPSEQExportController {
             case MC_ANNOTATE -> stripSuffixes(name, ".txt");
         }).split("_"))
                 .limit(2)
-                .collect(Collectors.joining("_"))
-                .toUpperCase(Locale.ROOT);
+                .collect(Collectors.joining("_"));
     }
 
     private static String stripSuffixes(String value, String... suffixes) {

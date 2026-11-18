@@ -159,7 +159,7 @@ public class BioJavaController {
         if (pdbId == null) {
             throw new IllegalArgumentException("PDB ID must not be null");
         }
-        String normalized = pdbId.trim().toUpperCase(Locale.ROOT);
+        String normalized = pdbId.trim();
         if (!normalized.matches("[A-Z0-9]{4}")) {
             throw new IllegalArgumentException(
                     "PDB ID must contain exactly four alphanumeric characters: " + pdbId);
