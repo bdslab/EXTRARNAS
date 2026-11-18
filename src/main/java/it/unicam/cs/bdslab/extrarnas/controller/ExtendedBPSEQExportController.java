@@ -74,7 +74,7 @@ public class ExtendedBPSEQExportController {
                 item.structure().remapPositions(fullSequence::remapSeqId);
             }
 
-            if (tool == TOOL.RNAPOLIS_ANNOTATOR || tool == TOOL.RNAVIEW || tool == TOOL.FR3D || tool == TOOL.X3DNA) {
+            if (tool == TOOL.RNAPOLIS_ANNOTATOR || tool == TOOL.RNAVIEW) {
                 item.structure().remapPositions(fullSequence::originalIndexForCompactedIndex);
             }
 
@@ -122,6 +122,7 @@ public class ExtendedBPSEQExportController {
     }
 
     public List<ExportItem> loadStructures(TOOL tool, Path sharedDirectory) throws IOException {
+        logger.info("Loading structures for tool " + tool.getName() + " from " + sharedDirectory);
         return switch (tool) {
             case RNAVIEW -> parseRNAView(sharedDirectory.resolve("rnaview-output"));
             case RNAPOLIS_ANNOTATOR -> parseRNApolis(sharedDirectory.resolve("rnapolis-output"));

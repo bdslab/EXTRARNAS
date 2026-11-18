@@ -185,14 +185,13 @@ public class BioJavaController {
                 StringBuilder sequence = new StringBuilder(groups.size());
                 List<Boolean> modelled = new ArrayList<>(groups.size());
                 for (Group group : groups) {
-                    sequence.append(group.getPDBName().charAt(0)); // get 1-letter code
+                    sequence.append(group.getChemComp().getOneLetterCode()); // get 1-letter code
                     modelled.add(group.has3D());
                 }
                 List<Group> atoms = chain.getAtomGroups();
                 Map<Integer, Integer> map = new HashMap<>(atoms.size());
-                int i = 0;
                 for (Group a : atoms) {
-                    map.put(a.getResidueNumber().getSeqNum(), i++);
+                    map.put(a.getResidueNumber().getSeqNum(), chain.getEntityInfo().getAlignedResIndex(a, chain) - 1);
                 }
                 return new FullChainSequence(sequence.toString(), modelled, map);
             }
@@ -206,7 +205,7 @@ public class BioJavaController {
             structure = reader.getStructure(inputStream);
         }
         for (Chain chain : structure.getChains()) {
-            if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
+            if (chainId.equals(chain.getName())) {
                 List<Group> groups = chain.getAtomGroups().stream()
                         .filter(Group::isNucleotide)
                         .toList();
