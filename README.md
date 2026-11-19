@@ -84,7 +84,26 @@ To compile the application and generate the executable package, run:
 ```bash
 mvn clean package
 ```
-This will place the executable `EXTRARNAS-fat.jar` and its required `docker/` folder in the `target/` directory.
+This will place the GUI executable `EXTRARNAS-fat.jar`, the CLI fat JAR `EXTRARNAS-cli.jar`, and the required `docker/` folder in the `target/` directory.
+
+### CLI
+
+Run the command-line version with the input CSV, output directory, and comma-separated tool shortcuts:
+
+```bash
+java -jar target/EXTRARNAS-cli.jar -i <input.csv> -o <output-directory> -t rw,ra,ba
+java -jar target/EXTRARNAS-cli.jar -h
+```
+The help message will print:
+```bash
+java -jar .\EXTRARNAS-0.0.1-SNAPSHOT-cli.jar -h         
+usage: java -jar EXTRARNAS-cli.jar -i <input.csv> -o <output-directory> -t
+            <tools> [Options]
+ -h         print help
+ -i <arg>   input csv file with molecules to process
+ -o <arg>   output directory
+ -t <arg>   comma-separated tools [ma,ra,x3,rw,ba,bp,fr]
+```
 
 
 ## Usage

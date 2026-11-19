@@ -1,12 +1,9 @@
 package it.unicam.cs.bdslab.extrarnas.cli;
 
-import it.unicam.cs.bdslab.extrarnas.view.HomeController;
 import it.unicam.cs.bdslab.extrarnas.view.utils.TOOL;
 import org.apache.commons.cli.*;
-import org.bouncycastle.util.Strings;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -16,15 +13,17 @@ import java.util.logging.Logger;
  * This class is the main entry point for the CLI application.
  */
 public class MainCli {
-    private static final String USAGE = "java -jar Extrarnas-cli.jar <inputFolder> <output> [Options]";
+    private static final String USAGE = "java -jar EXTRARNAS-cli.jar -i <input.csv> -o <output-directory> -t <tools> [Options]";
 
     public static final Logger logger = Logger.getLogger(MainCli.class.getName()    );
     public static void main(String[] args) {
         var options = new Options();
         options
-                .addOption("i", true, "input csv file with molecules to process")
-                .addOption("o", true, "output directory")
-                .addOption("t", true , String.format("tools [%s]", String.join(",", TOOL.getAvailableTools())))
+                .addOption(Option.builder("i").hasArg().desc("input csv file with molecules to process").build())
+                .addOption(Option.builder("o").hasArg().desc("output directory").build())
+                .addOption(Option.builder("t").hasArg()
+                        .desc(String.format("comma-separated tools [%s]", String.join(",", TOOL.getAvailableTools())))
+                        .build())
                 .addOption("h", false, "print help");
 
         CommandLineParser parser = new DefaultParser();
@@ -41,6 +40,14 @@ public class MainCli {
             String sharedFolder = cmd.getOptionValue("o");
             String inputCsv = cmd.getOptionValue("i");
             String tool = cmd.getOptionValue("t");
+
+            if (sharedFolder == null || inputCsv == null || tool == null) {
+                System.err.println("Missing required options: -i <input.csv>, -o <output-directory>, -t <tools>");
+                HelpFormatter formatter = new HelpFormatter();
+                formatter.printHelp(USAGE, options);
+                System.exit(1);
+            }
+
             List<TOOL> tools = Arrays.stream(tool
                     .split(","))
                     .map(TOOL::fromString)
@@ -68,7 +75,7 @@ public class MainCli {
             }
 
             Path csvPath = Path.of(inputCsv);
-            if (!csvPath.toFile().exists() && !csvPath.toFile().isFile()) {
+            if (!csvPath.toFile().exists() || !csvPath.toFile().isFile()) {
                 logger.severe("the input CSV file does not exist: " + inputCsv);
                 System.exit(1);
             }
