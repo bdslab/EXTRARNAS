@@ -8,6 +8,7 @@ import org.biojava.nbio.structure.io.PDBFileReader;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -39,7 +40,10 @@ public class BioJavaController {
     }
 
     public List<Structure> filterById(Path path, String chainId) throws IOException {
-        var structure = reader.getStructure(path.toFile());
+        Structure structure;
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            structure = reader.getStructure(inputStream);
+        }
         var filter = getFilter(chainId);
         var structures = new ArrayList<Structure>();
         for (Chain chain : structure.getChains()) {
@@ -53,7 +57,10 @@ public class BioJavaController {
     }
 
     public List<Structure> filterByStar(Path path) throws IOException {
-        var structure = reader.getStructure(path.toFile());
+        Structure structure;
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            structure = reader.getStructure(inputStream);
+        }
         var filter = getFilter("*");
 
         var structures = new ArrayList<Structure>();
@@ -96,6 +103,17 @@ public class BioJavaController {
         }
         
         return pdbPath;
+    }
+
+    public Path downloadCIF(String pdbId, String outputFolderPath) throws StructureException, IOException {
+        pdbId = normalizePdbId(pdbId);
+        Path outputDirectory = Paths.get(outputFolderPath);
+        Files.createDirectories(outputDirectory);
+        Path cifPath = outputDirectory.resolve(pdbId + ".cif");
+        if (!Files.exists(cifPath)) {
+            downloadOriginalCif(pdbId, cifPath);
+        }
+        return cifPath;
     }
     
     private void downloadOriginalCif(String pdbId, Path destination) throws IOException {
@@ -141,7 +159,7 @@ public class BioJavaController {
         if (pdbId == null) {
             throw new IllegalArgumentException("PDB ID must not be null");
         }
-        String normalized = pdbId.trim().toUpperCase(Locale.ROOT);
+        String normalized = pdbId.trim();
         if (!normalized.matches("[A-Z0-9]{4}")) {
             throw new IllegalArgumentException(
                     "PDB ID must contain exactly four alphanumeric characters: " + pdbId);
@@ -156,63 +174,72 @@ public class BioJavaController {
             return readFullChainSequenceManualPDB(path, chainId);
         }
 
-        Structure structure = cifReader.getStructure(path.toFile());
+        Structure structure;
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            structure = cifReader.getStructure(inputStream);
+        }
 
         for (Chain chain : structure.getChains()) {
-            if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
+            if (chainId.equals(chain.getName())) {
                 List<Group> groups = chain.getSeqResGroups().stream().toList();
                 StringBuilder sequence = new StringBuilder(groups.size());
                 List<Boolean> modelled = new ArrayList<>(groups.size());
                 for (Group group : groups) {
-                    sequence.append(group.getPDBName().charAt(0)); // get 1-letter code
+                    sequence.append(group.getChemComp().getOneLetterCode()); // get 1-letter code
                     modelled.add(group.has3D());
                 }
-                return new FullChainSequence(sequence.toString(), modelled);
+                List<Group> atoms = chain.getAtomGroups();
+                Map<Integer, Integer> map = new HashMap<>(atoms.size());
+                for (Group a : atoms) {
+                    map.put(a.getResidueNumber().getSeqNum(), chain.getEntityInfo().getAlignedResIndex(a, chain) - 1);
+                }
+                return new FullChainSequence(sequence.toString(), modelled, map);
             }
         }
         throw new IOException("Chain " + chainId + " was not found in " + path);
     }
 
     private FullChainSequence readFullChainSequenceManualPDB(Path path, String chainId) throws IOException {
-        Structure structure = reader.getStructure(path.toFile());
+        Structure structure;
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            structure = reader.getStructure(inputStream);
+        }
         for (Chain chain : structure.getChains()) {
-            if (chainId.equals(chain.getName()) || chainId.equals(chain.getId())) {
+            if (chainId.equals(chain.getName())) {
                 List<Group> groups = chain.getAtomGroups().stream()
                         .filter(Group::isNucleotide)
                         .toList();
                 List<Character> sequence = new ArrayList<>(groups.size());
                 List<Boolean> modelled = new ArrayList<>(groups.size());
+                Map<Integer, Integer> map = new HashMap<>(groups.size());
+
+                int k = 0;
                 for (Group group : groups) {
                     sequence.add(group.getPDBName().charAt(0)); // get 1-letter code
                     modelled.add(group.has3D());
-                }
-                // find unmodelled by checking the residue numbers
-                var residues = groups.stream().map(Group::getResidueNumber).map(ResidueNumber::getSeqNum).toList();
-                for (int i = 0; i < residues.size(); i++) {
-                    int current = residues.get(i);
-                    int next = (i + 1 < residues.size()) ? residues.get(i + 1) : current + 1;
-                    for (int missing = current + 1; missing < next; missing++) {
-                        sequence.add(i + 1, 'N');
-                        modelled.add(i + 1, false);
-                    }
+                    map.put(group.getResidueNumber().getSeqNum(), k++);
                 }
                 return new FullChainSequence(sequence.stream()
                             .map(Object::toString)
                             .collect(Collectors.joining())
-                        , modelled);
+                        , modelled
+                        , map);
             }
         }
         throw new IOException("Chain " + chainId + " was not found in " + path);
     }
 
-    public record FullChainSequence(String sequence, List<Boolean> modelled) {
+
+    public record FullChainSequence(String sequence, List<Boolean> modelled, Map<Integer, Integer> map) {
         public FullChainSequence {
             modelled = List.copyOf(modelled);
             if (sequence.length() != modelled.size()) {
                 throw new IllegalArgumentException("Sequence and modelled flags have different lengths");
             }
         }
-
+        public int remapSeqId(int i) {
+            return map.get(i);
+        }
         public int originalIndexForCompactedIndex(int compactedIndex) {
             int compacted = 0;
             for (int original = 0; original < modelled.size(); original++) {
@@ -240,8 +267,7 @@ public class BioJavaController {
             Set<String> allowedSet = new HashSet<>(List.of(allowedIds.split(";")));
             // check both getName() (auth_asym_id, es. "2") and getId() (label_asym_id, e.g. "C").
             // The mapping/CSV are with auth_asym_id, retrivable with BioJava with getName().
-            idFilter = chain -> allowedSet.contains(chain.getName())
-                    || allowedSet.contains(chain.getId());
+            idFilter = chain -> allowedSet.contains(chain.getName());
         }
         // combine id filter with rna filter
         return idFilter.and(getRNAFilter());

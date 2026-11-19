@@ -27,13 +27,15 @@ commentLine: COMMENT;                                  // Single comment line
 // Lexer rules
 // ------------------------------------
 
-NUCLEOTIDE: [ACGUacguTtRrYysSWwKkMmBbDdHhVvNn];        // Standard and degenerate nucleotide codes
-
-INT: [0-9]+;                                           // Integer (position indices)
-
 ANNOTATION: ( [GUWCHS] [GUWCHS] [ct] )                 // Base-pair edge annotation (e.g., WWc)
           | ( [<>] [<>] )                              // Stack annotations: >>, <<, <>, ><
           | 'XXX';                                     // Unknown annotation placeholder
+
+INT: [0-9]+;                                           // Integer (position indices)
+
+NUCLEOTIDE: [ACGUacguTtRrYysSWwKkMmBbDdHhVvNn0-9]+;        // Standard and degenerate nucleotide codes
+
+
 
 COMMENT: '#' ~[\r\n]+;                                 // Line comment (ignored)
 

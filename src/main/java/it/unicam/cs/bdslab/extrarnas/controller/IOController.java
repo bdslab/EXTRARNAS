@@ -2,15 +2,19 @@ package it.unicam.cs.bdslab.extrarnas.controller;
 
 import it.unicam.cs.bdslab.extrarnas.models.StructureInfo;
 import it.unicam.cs.bdslab.extrarnas.models.StructureStatus;
+import it.unicam.cs.bdslab.extrarnas.parser.output.RNASecondaryStructurePrinter;
+import it.unicam.cs.bdslab.extrarnas.view.HomeController;
+import it.unicam.cs.bdslab.extrarnas.view.utils.TOOL;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
+import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * Singleton controller for loading, saving, and packaging RNA files.
@@ -18,6 +22,7 @@ import java.util.List;
  */
 public class IOController {
 
+    private static final Logger log = Logger.getLogger(IOController.class.getName());
     private static final IOController instance = new IOController();
     private Path sharedDirectory;
 
@@ -82,6 +87,41 @@ public class IOController {
     private boolean looksLikeHeader(String line) {
         String lower = line.toLowerCase();
         return lower.contains("id") || lower.contains("chain");
+    }
+
+    /**
+     * Create a metadata file for the exectution, including the timestamp, tools used, and structure information, docker images.
+     * @param tools the selected tools used in the execution
+     * @param normal the output format for normal structures
+     * @param extended the output format for extended structures
+     * @param structures the list of structures processed
+     */
+    public void createMetadata(Collection<TOOL> tools, RNASecondaryStructurePrinter.OutputFormat normal, RNASecondaryStructurePrinter.OutputFormat extended, Collection<StructureInfo> structures) {
+        Date timestamp = new Date();
+        String name = String.format("metadata_%tF_%tH-%tM-%tS.txt", timestamp, timestamp, timestamp, timestamp);
+        // Implementation for creating metadata file
+        File metadataFile = new File(sharedDirectory.resolve("output").toString(), name);
+        try (FileWriter writer = new FileWriter(metadataFile)) {
+            writer.write("Timestamp: " + timestamp + "\n");
+            writer.write("Docker image core: " + HomeController.dockerAllToolsImage + ":" + HomeController.dockerAllToolsImageTag + "\n");
+            if (DockerController.getInstance().dockerImageExists(HomeController.dockerX3DNAImage)) {
+                writer.write("Docker image x3dna: " + HomeController.dockerX3DNAImage + ":" + HomeController.dockerX3DNAImageTag + "\n");
+            } else {
+                writer.write("Docker image x3dna: not found\n");
+            }
+            writer.write("Tools used: \n");
+            for (TOOL tool : tools) {
+                writer.write("- " + tool.getName() + " \n");
+            }
+            writer.write("Normal output format: " + normal + "\n");
+            writer.write("Extended output format: " + extended + "\n");
+            writer.write("Structures processed:\n");
+            for (StructureInfo structure : structures.stream().filter(s -> s.getStatus() != StructureStatus.ERROR).toList()) {
+                writer.write("- " + structure.toString() + "\n");
+            }
+        } catch (IOException e) {
+            log.severe("Error writing metadata file: " + e.getMessage());
+        }
     }
 
     /**

@@ -61,7 +61,7 @@ public class RNASecondaryStructurePrinter {
     public String printCanonicalBPSEQ(ExtendedRNASecondaryStructure structure) {
         StringBuilder sb = new StringBuilder();
 
-        List<Pair> pairs = structure.getCanonical();
+        List<Pair> pairs = structure.getNormalCanonical();
         String seq = this.getSequence(structure);
 
         for (int i = 0; i < seq.length(); i++) {

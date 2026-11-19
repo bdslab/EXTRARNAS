@@ -66,11 +66,18 @@ public class ExtendedBPSEQExportController {
 
         int exported = 0;
         for (ExportItem item : structures) {
+            logger.info("Exporting structure " + item.baseName() + item.suffix() + " for tool " + tool.getName());
             BioJavaController.FullChainSequence fullSequence =
                     loadFullChainSequence(sharedDirectory, item.baseName());
+
+            if (tool == TOOL.FR3D || tool == TOOL.X3DNA) {
+                item.structure().remapPositions(fullSequence::remapSeqId);
+            }
+
             if (tool == TOOL.RNAPOLIS_ANNOTATOR || tool == TOOL.RNAVIEW) {
                 item.structure().remapPositions(fullSequence::originalIndexForCompactedIndex);
             }
+
             item.structure().setSequence(fullSequence.sequence());
 
             if (secondaryStrcutureFormat != null) {
@@ -115,6 +122,7 @@ public class ExtendedBPSEQExportController {
     }
 
     public List<ExportItem> loadStructures(TOOL tool, Path sharedDirectory) throws IOException {
+        logger.info("Loading structures for tool " + tool.getName() + " from " + sharedDirectory);
         return switch (tool) {
             case RNAVIEW -> parseRNAView(sharedDirectory.resolve("rnaview-output"));
             case RNAPOLIS_ANNOTATOR -> parseRNApolis(sharedDirectory.resolve("rnapolis-output"));
@@ -246,8 +254,7 @@ public class ExtendedBPSEQExportController {
             case MC_ANNOTATE -> stripSuffixes(name, ".txt");
         }).split("_"))
                 .limit(2)
-                .collect(Collectors.joining("_"))
-                .toUpperCase(Locale.ROOT);
+                .collect(Collectors.joining("_"));
     }
 
     private static String stripSuffixes(String value, String... suffixes) {

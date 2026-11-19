@@ -145,18 +145,26 @@ public class DockerController {
             String chain = inputRow.chainFilter();
             listener.onRowStarted(pdbID, chain, rowIndex + 1, totalRows);
             logger.info("Processing structure " + pdbID + " with requested auth chain filter: " + chain);
-
             // Host path for reading (bind of /data)
-            Path fileToFilter = sharedFolder.resolve(pdbID + ".pdb");
-            var isPDB = true;
+            Path fileToFilter = sharedFolder.resolve(pdbID + ".cif");
+            var isPDB = false;
 
-            if (!Files.exists(fileToFilter)) {
-                logger.info("No local PDB file found for " + pdbID + "; downloading the structure with BioJava");
+            if (Files.exists(sharedFolder.resolve(pdbID + ".pdb"))) {
+                logger.info("Structure " + pdbID + " found as PDB in shared folder, using local PDB file");
+                isPDB = true;
+                fileToFilter = sharedFolder.resolve(pdbID + ".pdb");
+            } else {
                 try {
-                    fileToFilter = bioJavaController.downloadPDB(pdbID, String.valueOf(sharedFolder));
-                    if (fileToFilter.toString().endsWith("cif")) {
-                        logger.info("Structure " + pdbID + " requires mmCIF preprocessing; starting BeEM conversion");
-                        isPDB = false;
+                    Path cifPath = fileToFilter;
+                    if (!Files.exists(fileToFilter)) {
+                        logger.info("Structure " + pdbID + " does not exist as mmCIF file, downloading...");
+                        cifPath = bioJavaController.downloadCIF(pdbID, String.valueOf(sharedFolder));
+                    }
+                    if (!Files.exists(cifPath)) {
+                        logger.info("Structure " + pdbID + " does not exist as mmCIF file");
+                        bioJavaController.downloadPDB(pdbID, String.valueOf(sharedFolder));
+                        isPDB = true;
+                    } else {
                         this.beem(pdbID + ".cif");
                         this.moveFiles(pdbID);
                     }
@@ -515,7 +523,7 @@ public class DockerController {
     public void beem(String cifFile) throws InterruptedException {
         logger.info("Running BeEM conversion from mmCIF to bundled PDB files: " + cifFile);
         // call BeEM
-        String shellCmd = "cd /data && /home/BeEM/BeEM" + " " + cifFile;
+        String shellCmd = "cd /data && /home/BeEM/BeEM" + " " + cifFile + " -outfmt=1";
 
         // Create exec command
         ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(container.getId()).withAttachStdout(true).withAttachStderr(true).withCmd("bash", "-c", shellCmd).exec();

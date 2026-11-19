@@ -12,10 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,13 +28,13 @@ class FullChainSequenceTest {
         modelled.set(64, false);
         BioJavaController.FullChainSequence sequence =
                 new BioJavaController.FullChainSequence(
-                        "A".repeat(76), modelled);
+                        "A".repeat(76), modelled, new HashMap<>());
 
         assertEquals(76, sequence.sequence().length());
         assertEquals(59, sequence.originalIndexForCompactedIndex(59));
         assertEquals(65, sequence.originalIndexForCompactedIndex(60));
         assertThrows(IllegalArgumentException.class,
-                () -> sequence.originalIndexForCompactedIndex(71));
+                () -> sequence.originalIndexForCompactedIndex(77));
     }
 
     @Test 
@@ -46,7 +43,7 @@ class FullChainSequenceTest {
         File file4plxcRnaPolis = new File(pathTo4PLXC);
         // download cif with Biojavacontroller
         BioJavaController bioJavaController = BioJavaController.getInstance();
-        Path downloadedPDB = bioJavaController.downloadPDB("4PLX", Objects.requireNonNull(this.getClass().getResource("/out")).toURI().getPath().substring(1));
+        Path downloadedPDB = bioJavaController.downloadPDB("4PLX", Objects.requireNonNull(this.getClass().getResource("")).toURI().getPath().substring(1));
         // change .pdb to .cif
         Path downloadedCIF = Path.of(downloadedPDB.toString().replace(".pdb", ".cif"));
         BioJavaController.FullChainSequence sequence = bioJavaController.readFullChainSequence(downloadedCIF, "C");
